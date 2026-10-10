@@ -1,0 +1,4 @@
+# Protect secrets and project documentation from direct HTTP access (Apache).
+<FilesMatch "^(\.env|\.env\..*|README.*|.*\.sql)$">
+    Require all denied
+</FilesMatch>
