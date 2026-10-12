@@ -1,15 +1,249 @@
+
 <?php
-require_once __DIR__.'/../includes/bootstrap.php';$admin=require_role(['admin']);$pageTitle='Content appeals';
-if($_SERVER['REQUEST_METHOD']==='POST'){verify_csrf();$id=filter_input(INPUT_POST,'id',FILTER_VALIDATE_INT)?:0;$action=(string)($_POST['action']??'');$note=trim((string)($_POST['reviewer_note']??''));if($id>0&&in_array($action,['approve','reject'],true)){
- $s=db()->prepare('SELECT * FROM content_appeals WHERE id=? AND status="open"');$s->execute([$id]);$appeal=$s->fetch();
- if($appeal){db()->beginTransaction();try{$status=$action==='approve'?'approved':'rejected';
-  if($action==='approve'&&$appeal['content_type']==='question'){db()->prepare('UPDATE questions SET status="published",moderation_status="allowed" WHERE id=?')->execute([(int)$appeal['content_id']]);}
-  if($action==='approve'&&$appeal['content_type']==='answer'){db()->prepare('UPDATE answers SET status="published" WHERE id=?')->execute([(int)$appeal['content_id']]);db()->prepare('UPDATE ai_answer_reviews SET decision="published",reviewed_by=?,reviewed_at=NOW() WHERE answer_id=?')->execute([(int)$admin['id'],(int)$appeal['content_id']]);}
-  if($action==='approve'&&$appeal['content_type']==='question')db()->prepare('UPDATE ai_question_insights SET review_status="accepted",reviewed_by=?,reviewed_at=NOW() WHERE question_id=?')->execute([(int)$admin['id'],(int)$appeal['content_id']]);
-  db()->prepare('UPDATE content_appeals SET status=?,reviewed_by=?,reviewer_note=?,reviewed_at=NOW() WHERE id=?')->execute([$status,(int)$admin['id'],mb_substr($note,0,1000),$id]);audit_log((int)$admin['id'],'appeal_'.$status,'appeal',(int)$id,'content_type='.$appeal['content_type'].'; content_id='.$appeal['content_id'].'; note='.mb_substr($note,0,500));db()->commit();set_flash('success','Appeal decision saved.');}
- catch(Throwable $e){db()->rollBack();set_flash('error','Could not process the appeal. Check that the Phase 5 and Phase 6 insight tables exist.');}}
- }redirect('appeals.php');}
-$rows=db()->query('SELECT a.*,u.full_name,u.email FROM content_appeals a JOIN users u ON u.id=a.user_id ORDER BY FIELD(a.status,"open","approved","rejected"),a.created_at DESC LIMIT 200')->fetchAll();require __DIR__.'/../includes/header.php';?>
-<section class="page-hero"><span class="eyebrow">FAIR MODERATION</span><h1>Content appeals</h1><p>Review users' appeals for questions or answers blocked by automated checks.</p></section><section class="section-block">
-<?php if(!$rows): ?><div class="empty-state"><h3>No appeals yet</h3></div><?php endif;?>
-<?php foreach($rows as $r):?><article class="account-card report-card"><div><div class="question-meta"><span class="status-chip status-<?=e((string)$r['status'])?>"><?=e($r['status'])?></span><span><?=e($r['content_type'])?> #<?=(int)$r['content_id']?></span><span><?=e(time_ago($r['created_at']))?></span></div><h3><?=e($r['full_name'])?> <small><?=e($r['email'])?></small></h3><p><?=nl2br(e($r['reason']))?></p><?php if($r['reviewer_note']):?><p><strong>Admin note:</strong> <?=e($r['reviewer_note'])?></p><?php endif;?></div><?php if($r['status']==='open'):?><form method="post" class="report-status-form"><?=csrf_field()?><input type="hidden" name="id" value="<?=(int)$r['id']?>"><label for="note-<?=(int)$r['id']?>">Reviewer note (optional)</label><textarea id="note-<?=(int)$r['id']?>" name="reviewer_note" rows="3" maxlength="1000"></textarea><button class="btn btn-small btn-primary" name="action" value="approve" type="submit">Approve and publish</button><button class="btn btn-small btn-secondary" name="action" value="reject" type="submit">Reject appeal</button></form><?php endif;?></article><?php endforeach;?></section><?php require __DIR__.'/../includes/footer.php';?>
+
+require_once __DIR__ . '/../includes/bootstrap.php';
+
+$admin = require_role(['admin']);
+$pageTitle = 'Content appeals';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
+    $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT) ?: 0;
+    $action = (string) ($_POST['action'] ?? '');
+    $note = trim((string) ($_POST['reviewer_note'] ?? ''));
+
+    if ($id > 0 && in_array($action, ['approve', 'reject'], true)) {
+
+        $s = db()->prepare(
+            'SELECT * FROM content_appeals WHERE id = ? AND status = "open"'
+        );
+        $s->execute([$id]);
+        $appeal = $s->fetch();
+
+        if ($appeal) {
+            db()->beginTransaction();
+
+            try {
+                $status = $action === 'approve'
+                    ? 'approved'
+                    : 'rejected';
+
+                // Approve and publish a question
+                if (
+                    $action === 'approve' &&
+                    $appeal['content_type'] === 'question'
+                ) {
+                    db()->prepare(
+                        'UPDATE questions
+                         SET status = "published",
+                             moderation_status = "allowed"
+                         WHERE id = ?'
+                    )->execute([
+                        (int) $appeal['content_id']
+                    ]);
+                }
+
+                // Approve and publish an answer
+                if (
+                    $action === 'approve' &&
+                    $appeal['content_type'] === 'answer'
+                ) {
+                    db()->prepare(
+                        'UPDATE answers
+                         SET status = "published"
+                         WHERE id = ?'
+                    )->execute([
+                        (int) $appeal['content_id']
+                    ]);
+
+                    db()->prepare(
+                        'UPDATE ai_answer_reviews
+                         SET decision = "published",
+                             reviewed_by = ?,
+                             reviewed_at = NOW()
+                         WHERE answer_id = ?'
+                    )->execute([
+                        (int) $admin['id'],
+                        (int) $appeal['content_id']
+                    ]);
+                }
+
+                // Update AI question insights after approval
+                if (
+                    $action === 'approve' &&
+                    $appeal['content_type'] === 'question'
+                ) {
+                    db()->prepare(
+                        'UPDATE ai_question_insights
+                         SET review_status = "accepted",
+                             reviewed_by = ?,
+                             reviewed_at = NOW()
+                         WHERE question_id = ?'
+                    )->execute([
+                        (int) $admin['id'],
+                        (int) $appeal['content_id']
+                    ]);
+                }
+
+                // Save the appeal decision
+                db()->prepare(
+                    'UPDATE content_appeals
+                     SET status = ?,
+                         reviewed_by = ?,
+                         reviewer_note = ?,
+                         reviewed_at = NOW()
+                     WHERE id = ?'
+                )->execute([
+                    $status,
+                    (int) $admin['id'],
+                    mb_substr($note, 0, 1000),
+                    $id
+                ]);
+
+                // Record the action in the audit log
+                audit_log(
+                    (int) $admin['id'],
+                    'appeal_' . $status,
+                    'appeal',
+                    (int) $id,
+                    'content_type=' . $appeal['content_type'] .
+                    '; content_id=' . $appeal['content_id'] .
+                    '; note=' . mb_substr($note, 0, 500)
+                );
+
+                db()->commit();
+
+                set_flash('success', 'Appeal decision saved.');
+
+            } catch (Throwable $e) {
+                db()->rollBack();
+
+                set_flash(
+                    'error',
+                    'Could not process the appeal. Check that the Phase 5 and Phase 6 insight tables exist.'
+                );
+            }
+        }
+    }
+
+    redirect('appeals.php');
+}
+
+// Fetch appeals
+$rows = db()->query(
+    'SELECT a.*, u.full_name, u.email
+     FROM content_appeals a
+     JOIN users u ON u.id = a.user_id
+     ORDER BY FIELD(a.status, "open", "approved", "rejected"),
+              a.created_at DESC
+     LIMIT 200'
+)->fetchAll();
+
+require __DIR__ . '/../includes/header.php';
+?>
+
+<section class="page-hero">
+    <span class="eyebrow">FAIR MODERATION</span>
+
+    <h1>Content appeals</h1>
+
+    <p>
+        Review users' appeals for questions or answers blocked by automated checks.
+    </p>
+</section>
+
+<section class="section-block">
+
+    <?php if (!$rows): ?>
+        <div class="empty-state">
+            <h3>No appeals yet</h3>
+        </div>
+    <?php endif; ?>
+
+    <?php foreach ($rows as $r): ?>
+        <article class="account-card report-card">
+
+            <div>
+                <div class="question-meta">
+
+                    <span class="status-chip status-<?= e((string) $r['status']) ?>">
+                        <?= e($r['status']) ?>
+                    </span>
+
+                    <span>
+                        <?= e($r['content_type']) ?> #<?= (int) $r['content_id'] ?>
+                    </span>
+
+                    <span>
+                        <?= e(time_ago($r['created_at'])) ?>
+                    </span>
+
+                </div>
+
+                <h3>
+                    <?= e($r['full_name']) ?>
+                    <small><?= e($r['email']) ?></small>
+                </h3>
+
+                <p>
+                    <?= nl2br(e($r['reason'])) ?>
+                </p>
+
+                <?php if ($r['reviewer_note']): ?>
+                    <p>
+                        <strong>Admin note:</strong>
+                        <?= e($r['reviewer_note']) ?>
+                    </p>
+                <?php endif; ?>
+            </div>
+
+            <?php if ($r['status'] === 'open'): ?>
+                <form method="post" class="report-status-form">
+
+                    <?= csrf_field() ?>
+
+                    <input
+                        type="hidden"
+                        name="id"
+                        value="<?= (int) $r['id'] ?>"
+                    >
+
+                    <label for="note-<?= (int) $r['id'] ?>">
+                        Reviewer note (optional)
+                    </label>
+
+                    <textarea
+                        id="note-<?= (int) $r['id'] ?>"
+                        name="reviewer_note"
+                        rows="3"
+                        maxlength="1000"
+                    ></textarea>
+
+                    <button
+                        class="btn btn-small btn-primary"
+                        name="action"
+                        value="approve"
+                        type="submit"
+                    >
+                        Approve and publish
+                    </button>
+
+                    <button
+                        class="btn btn-small btn-secondary"
+                        name="action"
+                        value="reject"
+                        type="submit"
+                    >
+                        Reject appeal
+                    </button>
+
+                </form>
+            <?php endif; ?>
+
+        </article>
+    <?php endforeach; ?>
+
+</section>
+
+<?php require __DIR__ . '/../includes/footer.php'; ?>
