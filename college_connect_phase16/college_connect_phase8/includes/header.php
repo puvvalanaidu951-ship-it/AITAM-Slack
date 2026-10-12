@@ -24,7 +24,7 @@ $isActive = static function (array $pages) use ($currentPage): string {
 <body>
 <header class="site-header" style="width: 100%; position: sticky; top: 0; z-index: 1000; background-color:  #fff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
 <div class="nav-wrap">
-<a class="brand " href="<?=$rootPrefix?>index.php" aria-label="AITAM SLACK home"><span class="brand-mark " aria-hidden="true"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR54ZMf0HHgZnV7eaTcYPiSvWnFZR5bepQZVm36m9NyGBD9yXag-ch_2Kjk&s=10" width="50" height="50" alt="AITAM SLACK" ></span><span style="margin-left: 10px;">AITAM<span class="brand-light"> SLACK</span></span></a>
+<a class="brand " href="<?=$rootPrefix?>index.php" aria-label="AITAM SLACK home"><span class="" aria-hidden="true"><img src="<?=$rootPrefix?>assets/aitam.png" alt="AITAM SLACK" width="50" height="50"></span><span >AITAM<span class="brand-light"> SLACK</span></span></a>
 <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open navigation" aria-controls="mainNav" aria-expanded="false"><span class="menu-icon" aria-hidden="true"></span></button>
 <nav class="main-nav" id="mainNav" aria-label="Main navigation" style="margin-left: 20px;">
 <a<?=$isActive(['index.php'])?> href="<?=$rootPrefix?>index.php">Home</a>

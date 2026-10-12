@@ -108,10 +108,10 @@ CREATE TABLE IF NOT EXISTS notifications (
 ) ENGINE=InnoDB;
 
 INSERT INTO categories (name,slug,description,icon,color,sort_order) VALUES
-('Admissions','admissions','Eligibility, applications, and joining the college.','↗','violet',1),
-('Academics','academics','Courses, exams, projects, and study support.','⌘','blue',2),
-('Placements','placements','Career guidance, interviews, and opportunities.','↗','mint',3),
-('Campus Life','campus-life','Facilities, transport, clubs, and student life.','✳','orange',4)
+('Admissions','admissions','Eligibility, applications, and joining the college.','admissions','violet',1),
+('Academics','academics','Courses, exams, projects, and study support.','academics','blue',2),
+('Placements','placements','Career guidance, interviews, and opportunities.','placements','mint',3),
+('Campus Life','campus-life','Facilities, transport, clubs, and student life.','campus-life','orange',4)
 ON DUPLICATE KEY UPDATE description=VALUES(description), icon=VALUES(icon), color=VALUES(color), sort_order=VALUES(sort_order);
 
 INSERT INTO questions (user_id,category_id,title,body,moderation_status,status,created_at) VALUES

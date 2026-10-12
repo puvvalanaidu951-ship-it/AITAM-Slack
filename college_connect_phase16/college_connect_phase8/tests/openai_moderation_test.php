@@ -421,4 +421,13 @@ expect_true(
     'sanitized API failure diagnostic is retained for server/admin review'
 );
 
+$mockCategories = [
+    ['id' => 1, 'name' => 'Admissions', 'slug' => 'admissions', 'description' => 'Applications and admissions.'],
+    ['id' => 2, 'name' => 'Academics', 'slug' => 'academics', 'description' => 'Courses and exams.'],
+    ['id' => 3, 'name' => 'Placements', 'slug' => 'placements', 'description' => 'Jobs and interviews.'],
+    ['id' => 4, 'name' => 'Campus Life', 'slug' => 'campus-life', 'description' => 'Hostel, bus, and clubs.'],
+];
+$invalidCat = cc_openai_check_category('Title', 'Body', 999, $mockCategories);
+expect_true(!$invalidCat['matches_selected'], 'unrecognized category id fails category match');
+
 echo 'Passed ' . $passed . " OpenAI moderation tests.\n";

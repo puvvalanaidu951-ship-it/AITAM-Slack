@@ -1,7 +1,7 @@
 <?php $footerInAdmin = (basename(dirname($_SERVER['SCRIPT_NAME'] ?? '')) === 'admin'); $footerRoot = $footerInAdmin ? '../' : ''; ?>
 </main>
 <footer class="site-footer" id="campus-updates"><div class="footer-inner">
-<a class="brand footer-brand" href="<?=$footerRoot?>index.php"><span class="brand-mark " aria-hidden="true"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR54ZMf0HHgZnV7eaTcYPiSvWnFZR5bepQZVm36m9NyGBD9yXag-ch_2Kjk&s=10" alt="AITAM SLACK" width="50" height="50" ></span><span style="margin-left: 10px;">AITAM<span class="brand-light"> SLACK</span></span></a>
+<a class="brand footer-brand" href="<?=$footerRoot?>index.php"><span class=" " aria-hidden="true"><img src="<?=$footerRoot?>assets/aitam.png" alt="AITAM SLACK" width="60" height="60" ></span><span >AITAM<span class="brand-light"> SLACK</span></span></a>
 <p>A community where every question can find a helpful answer.</p>
 <div class="footer-links"><a href="<?=$footerRoot?>index.php">Home</a><a href="<?=$footerRoot?>questions.php">Questions</a><a href="<?=$footerRoot?>index.php#categories">Topics</a><?php if(current_user()):?><a href="<?=$footerRoot?>profile.php">My profile</a><?php endif;?></div>
 </div><div class="footer-bottom"><span>© <?=date('Y')?> AITAM SLACK</span>
@@ -19,7 +19,7 @@
             <a href="#">P Yajneswara Rao</a>
             <a href="#">P PurnaChandra Rao</a>
             <a href="#">K Lokesh</a>
-            <a href="#">Eswar Sir(SACK)</a>
+            <a href="#">Eswar Sir(SAC)</a>
              <a href="#">Dr Chandrasekhar(HOD)</a>
         </div>
     </div>

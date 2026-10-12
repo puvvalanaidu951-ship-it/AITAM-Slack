@@ -47,7 +47,7 @@ function cc_badges(array $r): array
         $badges[] = [
             'First Answer',
             'Posted a published answer',
-            '💬',
+            'message',
             'blue'
         ];
     }
@@ -56,7 +56,7 @@ function cc_badges(array $r): array
         $badges[] = [
             'Knowledge Sharer',
             'Published 10 answers',
-            '📚',
+            'book-open',
             'purple'
         ];
     }
@@ -65,7 +65,7 @@ function cc_badges(array $r): array
         $badges[] = [
             'Solution Finder',
             'Had an answer accepted',
-            '✅',
+            'check-circle',
             'green'
         ];
     }
@@ -74,7 +74,7 @@ function cc_badges(array $r): array
         $badges[] = [
             'Problem Solver',
             'Had 5 answers accepted',
-            '🧠',
+            'lightbulb',
             'orange'
         ];
     }
@@ -83,7 +83,7 @@ function cc_badges(array $r): array
         $badges[] = [
             'Community Helper',
             'Received 10 helpful votes',
-            '🤝',
+            'users',
             'teal'
         ];
     }
@@ -92,7 +92,7 @@ function cc_badges(array $r): array
         $badges[] = [
             'Trusted Mentor',
             'Received 50 helpful votes',
-            '🏆',
+            'trophy',
             'gold'
         ];
     }
@@ -101,7 +101,7 @@ function cc_badges(array $r): array
         $badges[] = [
             'Curator',
             'Saved 5 or more questions',
-            '🔖',
+            'bookmark',
             'pink'
         ];
     }
@@ -705,7 +705,7 @@ require __DIR__ . '/includes/header.php';
         <?php if ($loadError): ?>
 
             <div class="ach-empty">
-                <div class="ach-empty-icon">⚠️</div>
+                <div class="ach-empty-icon"><?= icon_svg('alert-circle') ?></div>
                 <h3>Achievements are temporarily unavailable</h3>
                 <p>
                     Check that the required database migrations and
@@ -800,7 +800,7 @@ require __DIR__ . '/includes/header.php';
                                 >
                                     <span class="ach-badge-icon"
                                           aria-hidden="true">
-                                        <?= e($b[2]) ?>
+                                        <?= icon_svg($b[2]) ?>
                                     </span>
 
                                     <div class="ach-badge-copy">
@@ -822,7 +822,7 @@ require __DIR__ . '/includes/header.php';
             <?php if ($shown === 0): ?>
 
                 <div class="ach-empty">
-                    <div class="ach-empty-icon">🏅</div>
+                    <div class="ach-empty-icon"><?= icon_svg('award') ?></div>
                     <h3>Badges are waiting to be earned</h3>
                     <p>
                         Publish helpful answers, solve questions,
@@ -840,7 +840,7 @@ require __DIR__ . '/includes/header.php';
         <?php endif; ?>
 
         <div class="ach-note">
-            <span class="ach-note-icon" aria-hidden="true">ℹ️</span>
+            <span class="ach-note-icon"><?= icon_svg('info-circle') ?></span>
             <span>
                 Achievements are lightweight recognition, not an official
                 academic credential. Badge counts are calculated from

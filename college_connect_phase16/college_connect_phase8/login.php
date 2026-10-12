@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 set_flash('success', 'You are now logged in.');
 
-                redirect('profile.php');
+                redirect('index.php');
             }
         } catch (PDOException $ex) {
             error_log('Login: ' . $ex->getMessage());
@@ -163,17 +163,17 @@ require __DIR__ . '/includes/header.php';
         <div class="auth-benefits">
 
             <div>
-                <span>✓</span>
+                <span><?= icon_svg('check-circle') ?></span>
                 Keep your profile up to date
             </div>
 
             <div>
-                <span>✓</span>
+                <span><?= icon_svg('check-circle') ?></span>
                 Discover useful campus knowledge
             </div>
 
             <div>
-                <span>✓</span>
+                <span><?= icon_svg('check-circle') ?></span>
                 Share your experience
             </div>
 

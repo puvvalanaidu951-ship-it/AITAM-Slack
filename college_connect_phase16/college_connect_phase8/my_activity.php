@@ -684,7 +684,7 @@ require __DIR__ . '/includes/header.php';
     <?php if ($loadError): ?>
 
         <section class="activity-empty">
-            <div class="activity-empty-icon">⚠️</div>
+            <div class="activity-empty-icon"><?= icon_svg('alert-circle') ?></div>
 
             <h3>Activity summary is unavailable</h3>
 
@@ -706,7 +706,7 @@ require __DIR__ . '/includes/header.php';
                         Questions shown
                     </span>
                     <span class="activity-stat-icon" aria-hidden="true">
-                        💬
+                        <?= icon_svg('message') ?>
                     </span>
                 </div>
 
@@ -725,7 +725,7 @@ require __DIR__ . '/includes/header.php';
                         Answers shown
                     </span>
                     <span class="activity-stat-icon" aria-hidden="true">
-                        ✍️
+                        <?= icon_svg('pen-line') ?>
                     </span>
                 </div>
 
@@ -744,7 +744,7 @@ require __DIR__ . '/includes/header.php';
                         Saved questions
                     </span>
                     <span class="activity-stat-icon" aria-hidden="true">
-                        🔖
+                        <?= icon_svg('bookmark') ?>
                     </span>
                 </div>
 
@@ -763,7 +763,7 @@ require __DIR__ . '/includes/header.php';
                         Votes cast
                     </span>
                     <span class="activity-stat-icon" aria-hidden="true">
-                        👍
+                        <?= icon_svg('thumbs-up') ?>
                     </span>
                 </div>
 
@@ -799,7 +799,7 @@ require __DIR__ . '/includes/header.php';
             <?php if (!$myQuestions): ?>
 
                 <div class="activity-empty">
-                    <div class="activity-empty-icon">💭</div>
+                    <div class="activity-empty-icon"><?= icon_svg('message') ?></div>
 
                     <h3>No questions yet</h3>
 
@@ -827,7 +827,7 @@ require __DIR__ . '/includes/header.php';
                         <article class="activity-item">
 
                             <div class="activity-item-icon" aria-hidden="true">
-                                💬
+                                <?= icon_svg('message') ?>
                             </div>
 
                             <div class="activity-item-content">
@@ -886,7 +886,7 @@ require __DIR__ . '/includes/header.php';
             <?php if (!$myAnswers): ?>
 
                 <div class="activity-empty">
-                    <div class="activity-empty-icon">✍️</div>
+                    <div class="activity-empty-icon"><?= icon_svg('pen-line') ?></div>
 
                     <h3>No answers yet</h3>
 
@@ -915,7 +915,7 @@ require __DIR__ . '/includes/header.php';
                         <article class="activity-item">
 
                             <div class="activity-item-icon" aria-hidden="true">
-                                ✍️
+                                <?= icon_svg('pen-line') ?>
                             </div>
 
                             <div class="activity-item-content">
@@ -964,7 +964,7 @@ require __DIR__ . '/includes/header.php';
 
                                     <?php if ((int) $answer['is_accepted'] === 1): ?>
                                         <span class="activity-accepted">
-                                            ✓ Accepted answer
+                                            <?= icon_svg('check-circle') ?> Accepted answer
                                         </span>
                                     <?php endif; ?>
 

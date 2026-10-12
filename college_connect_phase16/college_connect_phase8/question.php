@@ -27,24 +27,46 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
      :(empty($relevance['api_ok'])?'relevance_unavailable'
      :(!empty($relevance['spam'])||!empty($relevance['abusive'])?'spam_or_abuse'
      :(($relevance['classification']??(!empty($relevance['relevant'])?'relevant':'irrelevant'))==='irrelevant'?'answer_irrelevant':'relevance_uncertain'))));
-    cc_phase16_log_submission_decision(
-     'answer',
-     (int)$user['id'],
-     $checksUnavailable?'retry':'blocked',
-     $reasonCode,
-     !$checksUnavailable
-    );
+    if($checksUnavailable) {
+     cc_phase16_log_submission_decision('answer', (int)$user['id'], 'retry', $reasonCode, false);
+     cc_phase16_log_diagnostic($diagnosticId,'answer_submission',[
+      'stage'=>'checks_rejected_or_unavailable',
+      'moderation_flagged'=>!empty($risk['flagged']),
+      'relevance_decision_valid'=>!empty($relevance['api_ok']),
+      'database_insert_succeeded'=>false,
+      'error_category'=>$reasonCode
+     ]);
+     set_flash('error','We could not complete the required safety and relevance checks. Your answer was not saved; please try again later. Reference: '.$diagnosticId);
+     redirect('question.php?id='.$id.'#answers');
+    }
+    $ansStatus = ($decision === 'blocked') ? 'blocked' : 'pending_review';
+    $escalatedAnswerId = 0;
+    try {
+     db()->beginTransaction();
+     $parentCheck=db()->prepare('SELECT id FROM questions WHERE id=? AND status="published" AND moderation_status="allowed" FOR UPDATE');
+     $parentCheck->execute([$id]);
+     if(!$parentCheck->fetchColumn())throw new RuntimeException('The parent question is no longer available for answers.');
+     $ins=db()->prepare('INSERT INTO answers (question_id,user_id,body,status) VALUES (?,?,?,?)');
+     $ins->execute([$id,(int)$user['id'],$body,$ansStatus]);
+     $escalatedAnswerId=(int)db()->lastInsertId();
+     cc_ai_save_answer_review($escalatedAnswerId,$id,$risk,$relevance,$decision);
+     cc_phase16_record_moderation('answer',$escalatedAnswerId,$risk,$relevance,$ansStatus);
+     db()->commit();
+    } catch(Throwable $e) {
+     if(db()->inTransaction())db()->rollBack();
+     error_log('AITAM SLACK escalated answer insertion failed: '.$e->getMessage());
+    }
+    cc_phase16_log_submission_decision('answer', (int)$user['id'], 'blocked', $reasonCode, true);
     cc_phase16_log_diagnostic($diagnosticId,'answer_submission',[
-     'stage'=>'checks_rejected_or_unavailable',
+     'stage'=>'checks_escalated_or_blocked',
      'moderation_flagged'=>!empty($risk['flagged']),
      'relevance_decision_valid'=>!empty($relevance['api_ok']),
-     'database_insert_succeeded'=>false,
+     'database_insert_succeeded'=>$escalatedAnswerId>0,
      'error_category'=>$reasonCode
     ]);
-    if($checksUnavailable)set_flash('error','We could not complete the required safety and relevance checks. Your answer was not saved; please try again later. Reference: '.$diagnosticId);
-    elseif(!empty($risk['flagged'])||!empty($relevance['spam'])||!empty($relevance['abusive']))set_flash('error','Your answer could not be accepted because it did not pass the required safety or spam checks.');
-    elseif(($relevance['classification']??(!empty($relevance['relevant'])?'relevant':'irrelevant'))==='irrelevant')set_flash('error','Your answer was not saved because it does not appear to address this question.');
-    else set_flash('error','We could not confidently verify that your answer is relevant. Please revise it and try again.');
+    if(!empty($risk['flagged'])||!empty($relevance['spam'])||!empty($relevance['abusive']))set_flash('error','Your answer could not be accepted because it was flagged as spam or violating safety standards.');
+    elseif(($relevance['classification']??(!empty($relevance['relevant'])?'relevant':'irrelevant'))==='irrelevant')set_flash('error','Your answer does not appear to address this question. It has been escalated for administrator review and is not visible publicly.');
+    else set_flash('error','We could not verify that your answer addresses this question. It has been escalated for administrator review and is not visible publicly until approved.');
     redirect('question.php?id='.$id.'#answers');
    }
    try{
@@ -106,11 +128,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 $as=db()->prepare('SELECT a.*,COALESCE(u.full_name,"Community member") AS author_name,u.id AS author_id,u.role AS author_role,(SELECT COALESCE(SUM(v.vote),0) FROM answer_votes v WHERE v.answer_id=a.id) AS vote_score,(SELECT v.vote FROM answer_votes v WHERE v.answer_id=a.id AND v.user_id=?) AS my_vote FROM answers a LEFT JOIN users u ON u.id=a.user_id WHERE a.question_id=? AND a.status="published" ORDER BY a.is_accepted DESC,a.created_at ASC');$as->execute([$user?(int)$user['id']:0,$id]);$answers=$as->fetchAll();$pageTitle='Question details';$saved=false;if($user){$bs=db()->prepare('SELECT id FROM question_bookmarks WHERE user_id=? AND question_id=?');$bs->execute([(int)$user['id'],$id]);$saved=(bool)$bs->fetch();}require __DIR__.'/includes/header.php';
 ?>
 <section class="page-hero"><span class="eyebrow"><?=e($question['category_name'])?></span><h1><?=e($question['title'])?></h1><p>Asked by <?=e($question['author_name'])?> · <?=e(time_ago($question['created_at']))?></p></section>
-<section class="section-block"><article class="account-card question-detail"><p><?=nl2br(e($question['body']))?></p><?php if($user): ?><form method="post" class="inline-form"><?=csrf_field()?><input type="hidden" name="action" value="bookmark"><button class="btn btn-secondary btn-small" type="submit"><?= $saved ? '★ Saved — remove bookmark' : '☆ Save question' ?></button></form><?php endif; ?><div class="question-meta"><span class="topic-pill"><?=e($question['category_name'])?></span><span><?=count($answers)?> answers</span></div></article>
+<section class="section-block"><article class="account-card question-detail"><p><?=nl2br(e($question['body']))?></p><?php if($user): ?><form method="post" class="inline-form"><?=csrf_field()?><input type="hidden" name="action" value="bookmark"><button class="btn btn-secondary btn-small" type="submit"><?= icon_svg('bookmark') ?> <?= $saved ? 'Saved — remove bookmark' : 'Save question' ?></button></form><?php endif; ?><div class="question-meta"><span class="topic-pill"><?=e($question['category_name'])?></span><span><?=count($answers)?> answers</span></div></article>
 <div id="answers" class="section-heading compact"><div><h2>Community answers</h2><p>Share helpful, respectful guidance.</p></div></div>
 <?php if($errors): ?><div class="flash flash-error"><?php foreach($errors as $error): ?><p><?=e($error)?></p><?php endforeach; ?></div><?php endif; ?>
 <?php if(!$answers): ?><div class="empty-state"><h3>No answers yet</h3><p>Be the first to help.</p></div><?php endif; ?>
-<?php foreach($answers as $answer): ?><article id="answer-<?=(int)$answer['id']?>" class="account-card answer-card"><?php if($answer['is_accepted']): ?><span class="topic-pill accepted-pill">✓ Accepted answer</span><?php endif; ?><p><?=nl2br(e($answer['body']))?></p><div class="question-meta"><span><?=e($answer['author_name'])?></span><span><?=e($answer['author_role']??'community')?></span><span><?=e(time_ago($answer['created_at']))?></span><span>Helpful score: <?= (int)$answer['vote_score'] ?></span></div><?php if($user && (int)($answer['author_id']??0)!==(int)$user['id']): ?><form method="post" class="inline-form"><?=csrf_field()?><input type="hidden" name="action" value="vote"><input type="hidden" name="answer_id" value="<?=(int)$answer['id']?>"><button class="btn btn-small btn-secondary" name="vote" value="1" type="submit" <?=((int)($answer['my_vote']??0)===1)?'disabled':''?>>👍 Helpful</button><button class="btn btn-small btn-secondary" name="vote" value="-1" type="submit" <?=((int)($answer['my_vote']??0)===-1)?'disabled':''?>>👎 Not helpful</button><?php if($answer['my_vote']): ?><span class="topic-pill">Your vote: <?=((int)$answer['my_vote']===1)?'Helpful':'Not helpful'?></span><?php endif; ?></form><?php endif; ?>
+<?php foreach($answers as $answer): ?><article id="answer-<?=(int)$answer['id']?>" class="account-card answer-card"><?php if($answer['is_accepted']): ?><span class="topic-pill accepted-pill"><?= icon_svg('check-circle') ?> Accepted answer</span><?php endif; ?><p><?=nl2br(e($answer['body']))?></p><div class="question-meta"><span><?=e($answer['author_name'])?></span><span><?=e($answer['author_role']??'community')?></span><span><?=e(time_ago($answer['created_at']))?></span><span>Helpful score: <?= (int)$answer['vote_score'] ?></span></div><?php if($user && (int)($answer['author_id']??0)!==(int)$user['id']): ?><form method="post" class="inline-form"><?=csrf_field()?><input type="hidden" name="action" value="vote"><input type="hidden" name="answer_id" value="<?=(int)$answer['id']?>"><button class="btn btn-small btn-secondary" name="vote" value="1" type="submit" <?=((int)($answer['my_vote']??0)===1)?'disabled':''?>><?= icon_svg('thumbs-up') ?> Helpful</button><button class="btn btn-small btn-secondary" name="vote" value="-1" type="submit" <?=((int)($answer['my_vote']??0)===-1)?'disabled':''?>><?= icon_svg('thumbs-down') ?> Not helpful</button><?php if($answer['my_vote']): ?><span class="topic-pill">Your vote: <?=((int)$answer['my_vote']===1)?'Helpful':'Not helpful'?></span><?php endif; ?></form><?php endif; ?>
 <?php if($user&&((int)($question['author_id']??0)===(int)$user['id']||$user['role']==='admin')&&!$answer['is_accepted']): ?><form method="post" class="inline-form"><?=csrf_field()?><input type="hidden" name="action" value="accept"><input type="hidden" name="answer_id" value="<?=(int)$answer['id']?>"><button class="btn btn-small btn-secondary" type="submit">Accept answer</button></form><?php endif; ?></article><?php endforeach; ?>
 <div id="answer-form" class="account-card"><h2>Your answer</h2><p class="muted">Answers are checked for safety, spam, and relevance before they are saved. If checks are unavailable or uncertain, the answer will not be saved.</p><?php if(!$user): ?><p><a href="login.php">Log in</a> to post an answer.</p><?php else: ?><form method="post" class="account-form"><?=csrf_field()?><input type="hidden" name="action" value="answer"><label for="body">Answer details</label><textarea id="body" name="body" rows="5" minlength="5" maxlength="10000" required placeholder="Write a helpful answer..."></textarea><button class="btn btn-primary" type="submit">Post answer ↗</button></form><?php endif; ?></div><a class="filter-chip" href="questions.php">← Back to questions</a></section>
 <?php require __DIR__.'/includes/footer.php'; ?>

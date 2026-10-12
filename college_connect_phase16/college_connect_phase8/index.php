@@ -20,9 +20,9 @@ require __DIR__ . '/includes/header.php';
   <div class="hero-art" aria-label="Community connection illustration">
     <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
     <div class="orbit-dot dot-one"></div><div class="orbit-dot dot-two"></div><div class="orbit-dot dot-three"></div>
-    <div class="center-mark"><span class="mark-symbol">AITAM</span><span>SLACK</span></div>
-    <div class="float-card float-card-top"><span class="mini-icon mint">✓</span><div><strong>Helpful answer</strong><small>Community verified</small></div></div>
-    <div class="float-card float-card-bottom"><span class="mini-icon violet">✦</span><div><strong>Find your people</strong><small>Learn from every journey</small></div></div>
+    <div class="center-logo" style="animation:float 3s ease-in-out infinite;"><img src="./assets/25YearsLogoAITAM.png" alt="25 Year Anniversary Logo" width="150" height="150"></div>
+    <div class="float-card float-card-top"><span class="mini-icon mint"><?= icon_svg('check-circle') ?></span><div><strong>Helpful answer</strong><small>Community verified</small></div></div>
+    <div class="float-card float-card-bottom"><span class="mini-icon violet"><?= icon_svg('sparkles') ?></span><div><strong>Find your people</strong><small>Learn from every journey</small></div></div>
     <div class="person-bubble person-one">ST</div><div class="person-bubble person-two">AL</div><div class="person-bubble person-three">FC</div>
   </div>
 </section>
@@ -36,7 +36,7 @@ require __DIR__ . '/includes/header.php';
   <div class="category-grid">
     <?php foreach ($categories as $category): ?>
       <a class="category-card" href="questions.php?category=<?= (int)$category['id'] ?>">
-        <span class="category-icon <?= e($category['color']) ?>"><?= e($category['icon']) ?></span>
+        <span class="category-icon <?= e($category['color']) ?>"><?= icon_svg((string) $category['slug']) ?></span>
         <span class="category-title"><?= e($category['name']) ?></span>
         <span class="category-description"><?= e($category['description']) ?></span>
         <span class="category-arrow">↗</span>
@@ -59,7 +59,7 @@ require __DIR__ . '/includes/header.php';
       </div>
     <?php endif; ?>
   </div>
-  <aside class="announcements-panel">
+  <aside class="announcements-panel" id="campus-updates">
     <div class="section-heading compact"><div><span class="eyebrow">STAY INFORMED</span><h2>Campus updates</h2></div><span class="live-dot"></span></div>
     <?php foreach ($announcements as $a): ?>
       <article class="announcement"><span class="announcement-label"><?= e($a['label']) ?></span><h3><?= e($a['title']) ?></h3><p><?= e($a['body']) ?></p><time><?= e(date('M j, Y', strtotime($a['created_at']))) ?></time></article>

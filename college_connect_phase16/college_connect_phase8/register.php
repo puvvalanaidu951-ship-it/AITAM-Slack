@@ -118,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Welcome to AITAM SLACK. Your account has been created.'
                 );
 
-                redirect('profile.php');
+                redirect('index.php');
             }
         } catch (PDOException $ex) {
             error_log('Registration: ' . $ex->getMessage());
@@ -246,17 +246,17 @@ require __DIR__ . '/includes/header.php';
         <div class="auth-benefits">
 
             <div>
-                <span>✓</span>
+                <span><?= icon_svg('check-circle') ?></span>
                 Ask and explore college questions
             </div>
 
             <div>
-                <span>✓</span>
+                <span><?= icon_svg('check-circle') ?></span>
                 Connect with your campus community
             </div>
 
             <div>
-                <span>✓</span>
+                <span><?= icon_svg('check-circle') ?></span>
                 Build a profile around your journey
             </div>
 

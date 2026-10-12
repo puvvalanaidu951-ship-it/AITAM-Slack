@@ -7,7 +7,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  verify_csrf(); $title=trim((string)($_POST['title']??'')); $body=trim((string)($_POST['body']??'')); $categoryId=filter_input(INPUT_POST,'category_id',FILTER_VALIDATE_INT)?:0;
  if (mb_strlen($title)<8 || mb_strlen($title)>220) $errors[]='Title must be between 8 and 220 characters.';
  if (mb_strlen($body)<20 || mb_strlen($body)>10000) $errors[]='Question details must be between 20 and 10,000 characters.';
- $check=db()->prepare('SELECT id FROM categories WHERE id=? AND is_active=1'); $check->execute([$categoryId]); if(!$check->fetch()) $errors[]='Choose a valid topic.';
+ $check=db()->prepare('SELECT id, name FROM categories WHERE id=? AND is_active=1'); $check->execute([$categoryId]); $catRow=$check->fetch(); if(!$catRow) $errors[]='Choose a valid topic.';
+ if(!$errors){
+  $categoriesList = get_categories();
+  $catCheck = cc_openai_check_category($title, $body, $categoryId, $categoriesList);
+  if (!$catCheck['matches_selected']) {
+   $suggestedName = $catCheck['relevant_category_name'] ?: 'another topic';
+   $reasonText = !empty($catCheck['reason']) ? ' (' . rtrim($catCheck['reason'], '.') . ')' : '';
+   $errors[] = 'Your question does not match the selected topic "' . $catRow['name'] . '"' . $reasonText . '. Please select the relevant topic "' . $suggestedName . '" to proceed.';
+   if (!empty($catCheck['relevant_category_id'])) {
+    $categoryId = (int)$catCheck['relevant_category_id'];
+   }
+  }
+ }
  if(!$errors){
   $risk=cc_phase16_risk_scan($title,$body);
   $quality=!empty($risk['api_ok'])&&!empty($risk['flagged'])
@@ -22,16 +34,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     :(!empty($risk['flagged'])?'safety_flagged'
     :(empty($quality['api_ok'])?'quality_unavailable'
     :(($quality['decision']??'')==='block'?'quality_blocked':'quality_uncertain')));
-   cc_phase16_log_submission_decision(
-    'question',
-    (int)$user['id'],
-    $apiUnavailable?'retry':'blocked',
-    $reasonCode,
-    !$apiUnavailable
-   );
-   set_flash('error',$apiUnavailable
-    ? 'We could not complete the required safety and quality checks. Your question was not saved; please try again later.'
-    : 'Your question could not be accepted because it did not pass the required safety or quality checks.');
+   if ($apiUnavailable) {
+    cc_phase16_log_submission_decision('question', (int)$user['id'], 'retry', $reasonCode, false);
+    set_flash('error', 'We could not complete the automated safety and quality checks. Your question was not saved; please try again later.');
+    redirect('ask_question.php');
+   }
+   $isBlocked = ($decision['decision'] ?? '') === 'block' || !empty($risk['flagged']);
+   $qStatus = $isBlocked ? 'rejected' : 'pending_review';
+   $modStatus = $isBlocked ? 'blocked' : 'review';
+   try {
+    db()->beginTransaction();
+    $s=db()->prepare('INSERT INTO questions (user_id,category_id,title,body,moderation_status,status) VALUES (?,?,?,?,?,?)');
+    $s->execute([(int)$user['id'],$categoryId,$title,$body,$modStatus,$qStatus]);
+    $id=(int)db()->lastInsertId();
+    cc_phase16_record_moderation('question',$id,$risk,$quality,$qStatus);
+    db()->commit();
+    try { cc_ai_save_insight($id,$title,$body,get_categories()); } catch (Throwable $e) {}
+   } catch (Throwable $e) {
+    if(db()->inTransaction())db()->rollBack();
+    error_log('AITAM SLACK escalated question insertion failed: '.$e->getMessage());
+   }
+   cc_phase16_log_submission_decision('question', (int)$user['id'], 'blocked', $reasonCode, true);
+   set_flash('error', $isBlocked
+    ? 'Your question was flagged by automated checks as unwanted or inappropriate content and has been blocked from public view.'
+    : 'Your question was flagged for automated review and has been escalated to moderators. It is hidden and will not be displayed publicly until approved.');
    redirect('ask_question.php');
   }
   try {
