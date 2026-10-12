@@ -79,14 +79,12 @@
     border: 1px solid #1c4d8d;
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-
     opacity: 0;
     visibility: hidden;
     transform: translateY(8px);
     transition: opacity 0.25s ease,
-                transform 0.25s ease,
-                visibility 0.25s ease;
-
+    transform 0.25s ease,
+    visibility 0.25s ease;
     z-index: 1000;
 }
 
@@ -104,7 +102,7 @@
     text-decoration: none;
     border-radius: 5px;
     transition: background 0.25s ease,
-                padding-left 0.25s ease;
+    padding-left 0.25s ease;
 }
 
 .dropdown-menu a:hover {
