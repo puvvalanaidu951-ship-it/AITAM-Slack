@@ -91,6 +91,7 @@ require __DIR__ . '/../includes/header.php';
             <p>Create your normal account first.</p>
 
         </div>
+        
 
         <!-- Success message -->
         <?php if ($message): ?>

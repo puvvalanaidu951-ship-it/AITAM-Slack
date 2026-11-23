@@ -186,7 +186,10 @@ function require_login(): array
 
     if (!$user) {
         set_flash('error', 'Please log in to access that page.');
-        redirect('login.php');
+        $scriptDirectory = basename(
+            dirname((string) ($_SERVER['SCRIPT_NAME'] ?? ''))
+        );
+        redirect($scriptDirectory === 'admin' ? '../login.php' : 'login.php');
     }
 
     return $user;
@@ -296,9 +299,32 @@ function get_recent_questions(int $limit = 5): array
 }
 
 
-function search_questions(string $q = '', int $cat = 0): array
+function search_questions(
+    string $q = '',
+    int $cat = 0,
+    ?array &$pagination = null
+): array
 {
-    $sql = 'SELECT
+    $where = [
+        'q.status = "published"',
+        'q.moderation_status = "allowed"',
+    ];
+    $params = [];
+
+    if ($q !== '') {
+        $where[] = '(q.title LIKE :question_title OR q.body LIKE :question_body)';
+        $params[':question_title'] = '%' . $q . '%';
+        $params[':question_body'] = '%' . $q . '%';
+    }
+
+    if ($cat > 0) {
+        $where[] = 'q.category_id = :question_category';
+        $params[':question_category'] = $cat;
+    }
+
+    $whereSql = implode(' AND ', $where);
+    $countSql = 'SELECT COUNT(*) FROM questions q WHERE ' . $whereSql;
+    $recordsSql = 'SELECT
                 q.id,
                 q.title,
                 q.body,
@@ -314,39 +340,35 @@ function search_questions(string $q = '', int $cat = 0): array
             FROM questions q
             LEFT JOIN categories c ON c.id = q.category_id
             LEFT JOIN users u ON u.id = q.user_id
-            WHERE q.status = "published"
-              AND q.moderation_status = "allowed"';
+            WHERE ' . $whereSql . '
+            ORDER BY q.created_at DESC, q.id DESC
+            LIMIT :pagination_limit OFFSET :pagination_offset';
 
-    $params = [];
+    $result = getPaginatedRecords(
+        $countSql,
+        $recordsSql,
+        $params,
+        10
+    );
+    $pagination = $result['pagination'];
 
-    if ($q !== '') {
-        $sql .= ' AND (q.title LIKE :s1 OR q.body LIKE :s2)';
-
-        $params[':s1'] = '%' . $q . '%';
-        $params[':s2'] = '%' . $q . '%';
-    }
-
-    if ($cat > 0) {
-        $sql .= ' AND q.category_id = :cat';
-        $params[':cat'] = $cat;
-    }
-
-    $sql .= ' ORDER BY q.created_at DESC LIMIT 100';
-
-    $statement = db()->prepare($sql);
-    $statement->execute($params);
-
-    return $statement->fetchAll();
+    return $result['records'];
 }
 
 
 function get_announcements(int $limit = 3): array
 {
+    $limit = max(1, min(10, $limit));
     $statement = db()->prepare(
-        'SELECT title, body, label, created_at
-         FROM announcements
-         WHERE is_published = 1
-         ORDER BY created_at DESC
+        'SELECT
+            title,
+            description AS body,
+            category AS label,
+            COALESCE(published_at, created_at) AS created_at
+         FROM college_updates
+         WHERE status = "published"
+           AND COALESCE(published_at, created_at) <= NOW()
+         ORDER BY COALESCE(published_at, created_at) DESC, id DESC
          LIMIT :lim'
     );
 

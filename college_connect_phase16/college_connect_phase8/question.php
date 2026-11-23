@@ -1,10 +1,81 @@
 <?php
 
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/multilingual.php';
 require_once __DIR__ . '/includes/ai_helpers.php';
 require_once __DIR__ . '/includes/openai_moderation.php';
 
+function cc_redirect_question_answers(int $questionId, string $fragment = 'answers'): never
+{
+    $requestedPage = filter_var(
+        $_GET['answers_page'] ?? 1,
+        FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]
+    );
+    $page = $requestedPage === false ? 1 : $requestedPage;
+    $query = buildPaginationUrl(
+        $page,
+        ['id' => $questionId],
+        'answers_page'
+    );
+
+    redirect('question.php' . $query . '#' . $fragment);
+}
+
+function cc_redirect_question_state(
+    int $questionId,
+    array $state,
+    string $fragment
+): never {
+    $requestedPage = filter_var(
+        $_GET['answers_page'] ?? 1,
+        FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]
+    );
+    if ($requestedPage !== false && $requestedPage > 1) {
+        $state['answers_page'] = $requestedPage;
+    }
+    $requestedPerPage = filter_var(
+        $_GET['answers_per_page'] ?? null,
+        FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]
+    );
+    if (
+        $requestedPerPage !== false
+        && in_array($requestedPerPage, [10, 20, 50, 100], true)
+    ) {
+        $state['answers_per_page'] = $requestedPerPage;
+    }
+    $requestedQuestionTranslation = $_GET['question_translation'] ?? null;
+    if (
+        !isset($state['question_translation'])
+        && is_string($requestedQuestionTranslation)
+        && isset(cc_multilingual_languages()[$requestedQuestionTranslation])
+    ) {
+        $state['question_translation'] = $requestedQuestionTranslation;
+    }
+    $state['id'] = $questionId;
+    redirect(
+        'question.php?' . http_build_query($state)
+        . '#' . rawurlencode($fragment)
+    );
+}
+
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?: 0;
+if (
+    $_SERVER['REQUEST_METHOD'] === 'GET'
+    && array_key_exists('ui_language', $_GET)
+) {
+    $_SESSION['cc_interface_language'] = cc_multilingual_normalize_language(
+        $_GET['ui_language']
+    );
+    redirect('question.php?id=' . $id);
+}
+$interfaceLanguage = cc_multilingual_current_interface_language();
+$answerDraftKey = 'cc_answer_draft_' . $id;
+$answerBody = is_string($_SESSION[$answerDraftKey] ?? null)
+    ? $_SESSION[$answerDraftKey]
+    : '';
 $user = current_user();
 $errors = [];
 
@@ -42,14 +113,182 @@ if (!$question) {
     require __DIR__ . '/includes/footer.php';
     exit;
 }
+$questionLanguage = cc_multilingual_effective_language(
+    $question,
+    (string) $question['title'] . "\n" . (string) $question['body']
+);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = require_login();
     verify_csrf();
 
+    $interfaceLanguage = cc_multilingual_normalize_language(
+        $_POST['interface_language'] ?? $interfaceLanguage
+    );
+    $_SESSION['cc_interface_language'] = $interfaceLanguage;
     $action = (string) ($_POST['action'] ?? '');
 
-    if ($action === 'answer') {
+    if ($action === 'translate_question') {
+        $targetLanguage = $_POST['target_language'] ?? null;
+        if (!is_string($targetLanguage) || !isset(cc_multilingual_languages()[$targetLanguage])) {
+            set_flash('error', cc_multilingual_message('unsupported_language', $interfaceLanguage));
+            cc_redirect_question_answers($id, 'question-translation');
+        }
+        if ($targetLanguage === $questionLanguage) {
+            set_flash('error', cc_multilingual_message('same_language', $interfaceLanguage));
+            cc_redirect_question_answers($id, 'question-translation');
+        }
+
+        $cachedTranslation = db()->prepare(
+            'SELECT id FROM question_translations
+             WHERE question_id = ? AND language_code = ?
+             LIMIT 1'
+        );
+        $cachedTranslation->execute([$id, $targetLanguage]);
+        if ($cachedTranslation->fetchColumn()) {
+            set_flash('success', cc_multilingual_message('translation_saved', $interfaceLanguage));
+            cc_redirect_question_state(
+                $id,
+                ['question_translation' => $targetLanguage],
+                'question-translation-result'
+            );
+        }
+
+        try {
+            $translated = cc_openai_translate_question(
+                (string) $question['title'],
+                (string) $question['body'],
+                $questionLanguage,
+                $targetLanguage
+            );
+            $translationRisk = cc_phase16_risk_scan(
+                $translated['title'],
+                $translated['body']
+            );
+            if (empty($translationRisk['api_ok']) || !empty($translationRisk['flagged'])) {
+                throw new RuntimeException('Translated question did not pass safety checks.');
+            }
+
+            db()->prepare(
+                'INSERT INTO question_translations
+                    (question_id, language_code, title, body, created_by)
+                 VALUES (?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    title = VALUES(title),
+                    body = VALUES(body),
+                    created_by = VALUES(created_by)'
+            )->execute([
+                $id,
+                $targetLanguage,
+                $translated['title'],
+                $translated['body'],
+                (int) $user['id'],
+            ]);
+            set_flash('success', cc_multilingual_message('translation_saved', $interfaceLanguage));
+            cc_redirect_question_state(
+                $id,
+                ['question_translation' => $targetLanguage],
+                'question-translation-result'
+            );
+        } catch (Throwable $error) {
+            error_log('AITAM SLACK question translation failed: ' . cc_openai_sanitize_error($error->getMessage()));
+            set_flash('error', cc_multilingual_message('translation_failed', $interfaceLanguage));
+            cc_redirect_question_answers($id, 'question-translation');
+        }
+    } elseif ($action === 'translate_answer') {
+        $answerId = filter_var(
+            $_POST['answer_id'] ?? null,
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1]]
+        );
+        $targetLanguage = $_POST['target_language'] ?? null;
+        if (
+            $answerId === false
+            || !is_string($targetLanguage)
+            || !isset(cc_multilingual_languages()[$targetLanguage])
+        ) {
+            set_flash('error', cc_multilingual_message('unsupported_language', $interfaceLanguage));
+            cc_redirect_question_answers($id, 'answers');
+        }
+
+        $answerSource = db()->prepare(
+            'SELECT id, body, language_code
+             FROM answers
+             WHERE id = ? AND question_id = ? AND status = "published"
+             LIMIT 1'
+        );
+        $answerSource->execute([$answerId, $id]);
+        $sourceAnswer = $answerSource->fetch();
+        if (!$sourceAnswer) {
+            set_flash('error', cc_multilingual_message('translation_failed', $interfaceLanguage));
+            cc_redirect_question_answers($id, 'answers');
+        }
+        $sourceLanguage = cc_multilingual_effective_language(
+            $sourceAnswer,
+            (string) $sourceAnswer['body']
+        );
+        if ($targetLanguage === $sourceLanguage) {
+            set_flash('error', cc_multilingual_message('same_language', $interfaceLanguage));
+            cc_redirect_question_answers($id, 'answer-' . $answerId);
+        }
+
+        $cachedTranslation = db()->prepare(
+            'SELECT id FROM answer_translations
+             WHERE answer_id = ? AND language_code = ?
+             LIMIT 1'
+        );
+        $cachedTranslation->execute([$answerId, $targetLanguage]);
+        if ($cachedTranslation->fetchColumn()) {
+            set_flash('success', cc_multilingual_message('translation_saved', $interfaceLanguage));
+            cc_redirect_question_state(
+                $id,
+                [
+                    'translated_answer_id' => $answerId,
+                    'answer_translation' => $targetLanguage,
+                ],
+                'answer-translation-' . $answerId
+            );
+        }
+
+        try {
+            $translatedText = cc_openai_translate_text(
+                (string) $sourceAnswer['body'],
+                $sourceLanguage,
+                $targetLanguage
+            );
+            $translationRisk = cc_phase16_risk_scan('', $translatedText);
+            if (empty($translationRisk['api_ok']) || !empty($translationRisk['flagged'])) {
+                throw new RuntimeException('Translated answer did not pass safety checks.');
+            }
+
+            db()->prepare(
+                'INSERT INTO answer_translations
+                    (answer_id, language_code, translated_text, created_by)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    translated_text = VALUES(translated_text),
+                    created_by = VALUES(created_by)'
+            )->execute([
+                (int) $answerId,
+                $targetLanguage,
+                $translatedText,
+                (int) $user['id'],
+            ]);
+            set_flash('success', cc_multilingual_message('translation_saved', $interfaceLanguage));
+            cc_redirect_question_state(
+                $id,
+                [
+                    'translated_answer_id' => $answerId,
+                    'answer_translation' => $targetLanguage,
+                ],
+                'answer-translation-' . $answerId
+            );
+        } catch (Throwable $error) {
+            error_log('AITAM SLACK answer translation failed: ' . cc_openai_sanitize_error($error->getMessage()));
+            set_flash('error', cc_multilingual_message('translation_failed', $interfaceLanguage));
+            cc_redirect_question_answers($id, 'answer-' . (int) $answerId);
+        }
+    } elseif ($action === 'answer' || $action === 'generate_ai_answer') {
         $diagnosticId = cc_phase16_diagnostic_id();
 
         cc_phase16_log_diagnostic(
@@ -61,10 +300,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]
         );
 
-        $body = trim((string) ($_POST['body'] ?? ''));
+        $isAiGenerated = $action === 'generate_ai_answer';
+        $submittedAnswer = $_POST['body'] ?? '';
+        $body = is_string($submittedAnswer) ? $submittedAnswer : '';
 
-        if (mb_strlen($body) < 5 || mb_strlen($body) > 10000) {
-            $errors[] = 'Your answer must be between 5 and 10,000 characters.';
+        if ($isAiGenerated) {
+            $requestedLanguage = $_POST['answer_language'] ?? 'original';
+            $answerLanguage = $requestedLanguage === 'original'
+                ? $questionLanguage
+                : (is_string($requestedLanguage) ? $requestedLanguage : '');
+            if (!isset(cc_multilingual_languages()[$answerLanguage])) {
+                set_flash('error', cc_multilingual_message('unsupported_language', $interfaceLanguage));
+                cc_redirect_question_answers($id, 'ai-answer-form');
+            }
+            try {
+                $body = cc_openai_generate_answer(
+                    (string) $question['title'],
+                    (string) $question['body'],
+                    $questionLanguage,
+                    $answerLanguage
+                );
+            } catch (Throwable $error) {
+                error_log('AITAM SLACK AI answer generation failed: ' . cc_openai_sanitize_error($error->getMessage()));
+                set_flash('error', cc_multilingual_message('generation_failed', $interfaceLanguage));
+                cc_redirect_question_answers($id, 'ai-answer-form');
+            }
+        } else {
+            $answerLanguage = cc_multilingual_detect_language($body);
+            $_SESSION[$answerDraftKey] = $body;
+            $answerBody = $body;
+        }
+
+        if (!mb_check_encoding($body, 'UTF-8')) {
+            $errors[] = cc_multilingual_message('invalid_encoding', $interfaceLanguage);
+        } elseif (mb_strlen(trim($body)) < 5 || mb_strlen($body) > 10000) {
+            $errors[] = cc_multilingual_message('answer_length', $interfaceLanguage);
         }
 
         if (!$errors) {
@@ -172,12 +442,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     set_flash(
                         'error',
-                        'We could not complete the required safety and relevance checks. '
-                        . 'Your answer was not saved; please try again later. Reference: '
-                        . $diagnosticId
+                        cc_multilingual_message('answer_checks_unavailable', $interfaceLanguage)
+                        . ' Reference: ' . $diagnosticId
                     );
 
-                    redirect('question.php?id=' . $id . '#answers');
+                    cc_redirect_question_answers($id);
                 }
 
                 $ansStatus = ($decision === 'blocked')
@@ -207,14 +476,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     $ins = db()->prepare(
-                        'INSERT INTO answers (question_id, user_id, body, status)
-                         VALUES (?, ?, ?, ?)'
+                        'INSERT INTO answers
+                            (question_id, user_id, body, language_code, is_ai_generated, status)
+                         VALUES (?, ?, ?, ?, ?, ?)'
                     );
 
                     $ins->execute([
                         $id,
                         (int) $user['id'],
                         $body,
+                        $answerLanguage,
+                        $isAiGenerated ? 1 : 0,
                         $ansStatus
                     ]);
 
@@ -248,6 +520,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
                 }
 
+                if ($escalatedAnswerId < 1) {
+                    cc_phase16_log_submission_decision(
+                        'answer',
+                        (int) $user['id'],
+                        'retry',
+                        $reasonCode,
+                        true
+                    );
+                    set_flash(
+                        'error',
+                        cc_multilingual_message('answer_save_failed', $interfaceLanguage)
+                    );
+                    cc_redirect_question_answers($id);
+                }
+                unset($_SESSION[$answerDraftKey]);
+
                 cc_phase16_log_submission_decision(
                     'answer',
                     (int) $user['id'],
@@ -275,7 +563,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ) {
                     set_flash(
                         'error',
-                        'Your answer could not be accepted because it was flagged as spam or violating safety standards.'
+                        cc_multilingual_message('answer_blocked', $interfaceLanguage)
                     );
                 } elseif (
                     (
@@ -285,18 +573,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ) {
                     set_flash(
                         'error',
-                        'Your answer does not appear to address this question. '
-                        . 'It has been escalated for administrator review and is not visible publicly.'
+                        cc_multilingual_message('answer_irrelevant', $interfaceLanguage)
                     );
                 } else {
                     set_flash(
                         'error',
-                        'We could not verify that your answer addresses this question. '
-                        . 'It has been escalated for administrator review and is not visible publicly until approved.'
+                        cc_multilingual_message('answer_review', $interfaceLanguage)
                     );
                 }
 
-                redirect('question.php?id=' . $id . '#answers');
+                cc_redirect_question_answers($id);
             }
 
             try {
@@ -320,14 +606,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $ins = db()->prepare(
-                    'INSERT INTO answers (question_id, user_id, body, status)
-                     VALUES (?, ?, ?, "published")'
+                    'INSERT INTO answers
+                        (question_id, user_id, body, language_code, is_ai_generated, status)
+                     VALUES (?, ?, ?, ?, ?, "published")'
                 );
 
                 $ins->execute([
                     $id,
                     (int) $user['id'],
-                    $body
+                    $body,
+                    $answerLanguage,
+                    $isAiGenerated ? 1 : 0,
                 ]);
 
                 $answerId = (int) db()->lastInsertId();
@@ -359,14 +648,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     )->execute([
                         (int) $question['author_id'],
                         'answer',
-                        'New answer to your question',
-                        'Someone answered: ' . $question['title'],
+                        cc_multilingual_message(
+                            'answer_notification_title',
+                            $questionLanguage
+                        ),
+                        ($isAiGenerated
+                            ? cc_multilingual_message('ai_answer_notification', $questionLanguage)
+                            : cc_multilingual_message('new_answer_notification', $questionLanguage))
+                            . $question['title'],
                         'question',
                         $id
                     ]);
                 }
 
                 db()->commit();
+                unset($_SESSION[$answerDraftKey]);
 
                 cc_phase16_log_diagnostic(
                     $diagnosticId,
@@ -381,10 +677,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 set_flash(
                     'success',
-                    'Your answer has been published after OpenAI safety and relevance checks.'
+                    cc_multilingual_message('answer_saved', $interfaceLanguage)
                 );
 
-                redirect('question.php?id=' . $id . '#answers');
+                cc_redirect_question_answers($id);
             } catch (Throwable $e) {
                 if (db()->inTransaction()) {
                     db()->rollBack();
@@ -425,8 +721,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]
                 );
 
-                $errors[] = 'Could not post your answer. Please try again later or contact an administrator. Reference: '
-                    . $diagnosticId;
+                $errors[] = cc_multilingual_message(
+                    'answer_save_failed',
+                    $interfaceLanguage
+                ) . ' Reference: ' . $diagnosticId;
             }
         }
     } elseif ($action === 'bookmark') {
@@ -454,14 +752,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             set_flash('success', 'Question saved to your bookmarks.');
         }
 
-        redirect('question.php?id=' . $id);
+        cc_redirect_question_answers($id);
     } elseif ($action === 'vote') {
         $aid = filter_input(INPUT_POST, 'answer_id', FILTER_VALIDATE_INT) ?: 0;
         $vote = (int) ($_POST['vote'] ?? 0);
 
         if (!in_array($vote, [-1, 1], true)) {
             set_flash('error', 'Invalid vote.');
-            redirect('question.php?id=' . $id . '#answers');
+            cc_redirect_question_answers($id);
         }
 
         $check = db()->prepare(
@@ -475,12 +773,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$votedAnswer) {
             set_flash('error', 'That answer is no longer available.');
-            redirect('question.php?id=' . $id . '#answers');
+            cc_redirect_question_answers($id);
         }
 
         if ((int) $votedAnswer['user_id'] === (int) $user['id']) {
             set_flash('error', 'You cannot vote on your own answer.');
-            redirect('question.php?id=' . $id . '#answers');
+            cc_redirect_question_answers($id);
         }
 
         $existing = db()->prepare(
@@ -506,7 +804,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         set_flash('success', 'Your feedback has been saved.');
-        redirect('question.php?id=' . $id . '#answer-' . $aid);
+        cc_redirect_question_answers($id, 'answer-' . $aid);
     } elseif ($action === 'accept') {
         if (
             (int) ($question['author_id'] ?? 0) !== (int) $user['id']
@@ -568,13 +866,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        redirect('question.php?id=' . $id . '#answers');
+        cc_redirect_question_answers($id);
     }
 }
 
-$as = db()->prepare(
+$answerResult = getPaginatedRecords(
+    'SELECT COUNT(*)
+     FROM answers
+     WHERE question_id = :answer_count_question_id
+       AND status = "published"',
     'SELECT
-        a.*,
+        a.id,
+        a.question_id,
+        a.user_id,
+        a.body,
+        a.language_code,
+        a.is_ai_generated,
+        a.status,
+        a.is_accepted,
+        a.created_at,
         COALESCE(u.full_name, "Community member") AS author_name,
         u.id AS author_id,
         u.role AS author_role,
@@ -586,16 +896,71 @@ $as = db()->prepare(
         (
             SELECT v.vote
             FROM answer_votes v
-            WHERE v.answer_id = a.id AND v.user_id = ?
+           WHERE v.answer_id = a.id
+             AND v.user_id = :answer_vote_user_id
         ) AS my_vote
      FROM answers a
      LEFT JOIN users u ON u.id = a.user_id
-     WHERE a.question_id = ? AND a.status = "published"
-     ORDER BY a.is_accepted DESC, a.created_at ASC'
+     WHERE a.question_id = :answer_question_id
+       AND a.status = "published"
+     ORDER BY a.is_accepted DESC, a.created_at ASC, a.id ASC
+     LIMIT :pagination_limit OFFSET :pagination_offset',
+    [
+        ':answer_vote_user_id' => $user ? (int) $user['id'] : 0,
+        ':answer_question_id' => $id,
+    ],
+    10,
+    [10, 20, 50, 100],
+    'answers_page',
+    'answers_per_page',
+    [':answer_count_question_id' => $id]
 );
-
-$as->execute([$user ? (int) $user['id'] : 0, $id]);
-$answers = $as->fetchAll();
+$answers = $answerResult['records'];
+$answerPagination = $answerResult['pagination'];
+$questionTranslation = null;
+$requestedQuestionTranslation = $_GET['question_translation'] ?? '';
+if (
+    is_string($requestedQuestionTranslation)
+    && isset(cc_multilingual_languages()[$requestedQuestionTranslation])
+) {
+    $translationStatement = db()->prepare(
+        'SELECT title, body
+         FROM question_translations
+         WHERE question_id = ? AND language_code = ?
+         LIMIT 1'
+    );
+    $translationStatement->execute([$id, $requestedQuestionTranslation]);
+    $questionTranslation = $translationStatement->fetch() ?: null;
+}
+$answerTranslation = null;
+$requestedTranslatedAnswerId = filter_var(
+    $_GET['translated_answer_id'] ?? null,
+    FILTER_VALIDATE_INT,
+    ['options' => ['min_range' => 1]]
+);
+$requestedAnswerTranslation = $_GET['answer_translation'] ?? '';
+if (
+    $requestedTranslatedAnswerId !== false
+    && is_string($requestedAnswerTranslation)
+    && isset(cc_multilingual_languages()[$requestedAnswerTranslation])
+) {
+    foreach ($answers as $answer) {
+        if ((int) $answer['id'] === (int) $requestedTranslatedAnswerId) {
+            $translationStatement = db()->prepare(
+                'SELECT translated_text
+                 FROM answer_translations
+                 WHERE answer_id = ? AND language_code = ?
+                 LIMIT 1'
+            );
+            $translationStatement->execute([
+                (int) $requestedTranslatedAnswerId,
+                $requestedAnswerTranslation,
+            ]);
+            $answerTranslation = $translationStatement->fetchColumn();
+            break;
+        }
+    }
+}
 
 $pageTitle = 'Question details';
 $saved = false;
@@ -624,24 +989,75 @@ require __DIR__ . '/includes/header.php';
 </section>
 
 <section class="section-block">
+    <form method="get" action="question.php" class="inline-form">
+        <input type="hidden" name="id" value="<?= $id ?>">
+        <label for="ui-language">Language for messages</label>
+        <select id="ui-language" name="ui_language">
+            <?php foreach (cc_multilingual_languages() as $code => $name): ?>
+                <option value="<?= e($code) ?>" <?= $interfaceLanguage === $code ? 'selected' : '' ?>>
+                    <?= e($name) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <button class="btn btn-small btn-secondary" type="submit">Set language</button>
+    </form>
+
     <article class="account-card question-detail">
         <p><?= nl2br(e($question['body'])) ?></p>
+        <p class="question-meta">
+            <span class="topic-pill">
+                <?= e(cc_multilingual_languages()[$questionLanguage]) ?>
+            </span>
+            Original question
+        </p>
 
         <?php if ($user): ?>
             <form method="post" class="inline-form">
                 <?= csrf_field() ?>
+                <input type="hidden" name="interface_language" value="<?= e($interfaceLanguage) ?>">
                 <input type="hidden" name="action" value="bookmark">
 
                 <button class="btn btn-secondary btn-small" type="submit">
                     <?= icon_svg('bookmark') ?>
-                    <?= $saved ? 'Saved — remove bookmark' : 'Save question' ?>
+                    <?= $saved ? 'Saved - remove bookmark' : 'Save question' ?>
                 </button>
             </form>
         <?php endif; ?>
 
+        <?php if ($questionTranslation): ?>
+            <section id="question-translation-result" class="account-card">
+                <h2>Translation: <?= e(cc_multilingual_languages()[$requestedQuestionTranslation]) ?></h2>
+                <h3><?= e($questionTranslation['title']) ?></h3>
+                <p><?= nl2br(e($questionTranslation['body'])) ?></p>
+                <p class="muted">Original question remains unchanged.</p>
+            </section>
+        <?php endif; ?>
+
+        <?php if ($user): ?>
+            <form method="post" class="inline-form" id="question-translation">
+                <?= csrf_field() ?>
+                <input type="hidden" name="interface_language" value="<?= e($interfaceLanguage) ?>">
+                <input type="hidden" name="action" value="translate_question">
+                <label for="question-translation-language">Translate question to</label>
+                <select id="question-translation-language" name="target_language">
+                    <?php $questionTranslationDefault = $questionLanguage === 'en' ? 'te' : 'en'; ?>
+                    <?php foreach (cc_multilingual_languages() as $code => $name): ?>
+                        <?php if ($code !== $questionLanguage): ?>
+                            <option value="<?= e($code) ?>" <?= $code === $questionTranslationDefault ? 'selected' : '' ?>>
+                                <?= e($name) ?>
+                            </option>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </select>
+                <button class="btn btn-small btn-secondary" type="submit">Translate question</button>
+            </form>
+        <?php else: ?>
+            <p><a href="login.php">Log in</a> to translate this question.</p>
+        <?php endif; ?>
+
         <div class="question-meta">
             <span class="topic-pill"><?= e($question['category_name']) ?></span>
-            <span><?= count($answers) ?> answers</span>
+            <span><?= (int) $answerPagination['total'] ?> answers</span>
         </div>
     </article>
 
@@ -668,6 +1084,13 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
 
     <?php foreach ($answers as $answer): ?>
+        <?php
+        $answerLanguage = cc_multilingual_effective_language(
+            $answer,
+            (string) $answer['body']
+        );
+        $answerTranslationDefault = $answerLanguage === 'en' ? 'te' : 'en';
+        ?>
         <article
             id="answer-<?= (int) $answer['id'] ?>"
             class="account-card answer-card"
@@ -680,6 +1103,51 @@ require __DIR__ . '/includes/header.php';
             <?php endif; ?>
 
             <p><?= nl2br(e($answer['body'])) ?></p>
+            <p class="question-meta">
+                <span class="topic-pill"><?= e(cc_multilingual_languages()[$answerLanguage]) ?></span>
+                <?= $answer['is_ai_generated'] ? 'AI-generated answer' : 'Original answer' ?>
+            </p>
+
+            <?php if (
+                $answerTranslation !== null
+                && (int) $answer['id'] === (int) $requestedTranslatedAnswerId
+            ): ?>
+                <section
+                    class="account-card"
+                    id="answer-translation-<?= (int) $answer['id'] ?>"
+                >
+                    <h3>Translation: <?= e(cc_multilingual_languages()[$requestedAnswerTranslation]) ?></h3>
+                    <p><?= nl2br(e((string) $answerTranslation)) ?></p>
+                    <p class="muted">Original answer remains unchanged.</p>
+                </section>
+            <?php endif; ?>
+
+            <?php if ($user): ?>
+                <form
+                    method="post"
+                    class="inline-form"
+                    id="translate-answer-form-<?= (int) $answer['id'] ?>"
+                >
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="interface_language" value="<?= e($interfaceLanguage) ?>">
+                    <input type="hidden" name="action" value="translate_answer">
+                    <input type="hidden" name="answer_id" value="<?= (int) $answer['id'] ?>">
+                    <label for="answer-translation-language-<?= (int) $answer['id'] ?>">Translate answer to</label>
+                    <select
+                        id="answer-translation-language-<?= (int) $answer['id'] ?>"
+                        name="target_language"
+                    >
+                        <?php foreach (cc_multilingual_languages() as $code => $name): ?>
+                            <?php if ($code !== $answerLanguage): ?>
+                                <option value="<?= e($code) ?>" <?= $code === $answerTranslationDefault ? 'selected' : '' ?>>
+                                    <?= e($name) ?>
+                                </option>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </select>
+                    <button class="btn btn-small btn-secondary" type="submit">Translate answer</button>
+                </form>
+            <?php endif; ?>
 
             <div class="question-meta">
                 <span><?= e($answer['author_name']) ?></span>
@@ -691,6 +1159,7 @@ require __DIR__ . '/includes/header.php';
             <?php if ($user && (int) ($answer['author_id'] ?? 0) !== (int) $user['id']): ?>
                 <form method="post" class="inline-form">
                     <?= csrf_field() ?>
+                    <input type="hidden" name="interface_language" value="<?= e($interfaceLanguage) ?>">
                     <input type="hidden" name="action" value="vote">
                     <input
                         type="hidden"
@@ -739,6 +1208,7 @@ require __DIR__ . '/includes/header.php';
             ): ?>
                 <form method="post" class="inline-form">
                     <?= csrf_field() ?>
+                    <input type="hidden" name="interface_language" value="<?= e($interfaceLanguage) ?>">
                     <input type="hidden" name="action" value="accept">
                     <input
                         type="hidden"
@@ -753,18 +1223,49 @@ require __DIR__ . '/includes/header.php';
         </article>
     <?php endforeach; ?>
 
+    <?= renderPagination(
+        $answerPagination,
+        'answers_page',
+        'answers_per_page',
+        'Answers',
+        'answers'
+    ) ?>
+
     <div id="answer-form" class="account-card">
         <h2>Your answer</h2>
         <p class="muted">
-            Answers are checked for safety, spam, and relevance before they are saved.
-            If checks are unavailable or uncertain, the answer will not be saved.
+            Answers in all six supported languages are checked for safety, spam, and relevance before they are saved.
+            If checks are unavailable, the answer will not be saved. Uncertain answers may be held for moderator review.
         </p>
 
         <?php if (!$user): ?>
             <p><a href="login.php">Log in</a> to post an answer.</p>
         <?php else: ?>
+            <form method="post" class="account-form" id="ai-answer-form">
+                <?= csrf_field() ?>
+                <input type="hidden" name="interface_language" value="<?= e($interfaceLanguage) ?>">
+                <input type="hidden" name="action" value="generate_ai_answer">
+                <label for="answer-language">AI answer language</label>
+                <select id="answer-language" name="answer_language">
+                    <option value="original">
+                        Match question language: <?= e(cc_multilingual_languages()[$questionLanguage]) ?>
+                    </option>
+                    <?php foreach (cc_multilingual_languages() as $code => $name): ?>
+                        <?php if ($code !== $questionLanguage): ?>
+                            <option value="<?= e($code) ?>"><?= e($name) ?></option>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </select>
+                <p class="form-note">
+                    AI answers are checked by the same safety and relevance system as community answers.
+                    Verify important details with official college sources.
+                </p>
+                <button class="btn btn-secondary" type="submit">Generate AI answer</button>
+            </form>
+
             <form method="post" class="account-form">
                 <?= csrf_field() ?>
+                <input type="hidden" name="interface_language" value="<?= e($interfaceLanguage) ?>">
                 <input type="hidden" name="action" value="answer">
 
                 <label for="body">Answer details</label>
@@ -776,7 +1277,7 @@ require __DIR__ . '/includes/header.php';
                     maxlength="10000"
                     required
                     placeholder="Write a helpful answer..."
-                ></textarea>
+                ><?= e($answerBody) ?></textarea>
 
                 <button class="btn btn-primary" type="submit">
                     Post answer ↗

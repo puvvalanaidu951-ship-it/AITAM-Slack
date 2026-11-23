@@ -130,15 +130,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('appeals.php');
 }
 
-// Fetch appeals
-$rows = db()->query(
-    'SELECT a.*, u.full_name, u.email
+$appealResult = getPaginatedRecords(
+    'SELECT COUNT(*)
+     FROM content_appeals a
+     JOIN users u ON u.id = a.user_id',
+    'SELECT
+        a.id,
+        a.content_type,
+        a.content_id,
+        a.reason,
+        a.status,
+        a.reviewer_note,
+        a.created_at,
+        u.full_name,
+        u.email
      FROM content_appeals a
      JOIN users u ON u.id = a.user_id
      ORDER BY FIELD(a.status, "open", "approved", "rejected"),
-              a.created_at DESC
-     LIMIT 200'
-)->fetchAll();
+              a.created_at DESC,
+              a.id DESC
+     LIMIT :pagination_limit OFFSET :pagination_offset',
+    [],
+    20
+);
+$rows = $appealResult['records'];
+$pagination = $appealResult['pagination'];
 
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -152,7 +168,7 @@ require __DIR__ . '/../includes/header.php';
         Review users' appeals for questions or answers blocked by automated checks.
     </p>
 </section>
-
+<?php include __DIR__ . '/admin-nav.php'; ?>
 <section class="section-block">
 
     <?php if (!$rows): ?>
@@ -243,6 +259,8 @@ require __DIR__ . '/../includes/header.php';
 
         </article>
     <?php endforeach; ?>
+
+    <?= renderPagination($pagination, 'page', 'per_page', 'Appeals') ?>
 
 </section>
 

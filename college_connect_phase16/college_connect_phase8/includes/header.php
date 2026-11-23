@@ -23,7 +23,7 @@ $isActive = static function (array $pages) use ($currentPage): string {
 
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="utf-8">
@@ -31,6 +31,20 @@ $isActive = static function (array $pages) use ($currentPage): string {
     <meta name="description" content="AITAM SLACK college community">
 
     <title><?= e($pageTitle) ?> | AITAM SLACK</title>
+    <link rel="icon" type="image/png" href="<?= e($rootPrefix) ?>assets/aitam.png">
+
+    <script>
+        (() => {
+            try {
+                const theme = localStorage.getItem('aitam-theme');
+                if (theme === 'dark' || theme === 'light') {
+                    document.documentElement.setAttribute('data-theme', theme);
+                }
+            } catch (error) {
+                console.warn('Theme preference could not be restored.', error);
+            }
+        })();
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
 
@@ -48,14 +62,27 @@ $isActive = static function (array $pages) use ($currentPage): string {
         rel="stylesheet"
         href="<?= e($rootPrefix) ?>assets/phase3.css"
     >
+
+    <link
+        rel="stylesheet"
+        href="<?= e($rootPrefix) ?>assets/pagination.css"
+    >
+
+    <?php if (in_array(
+        $currentPage,
+        ['college_updates.php', 'college_update.php', 'admin/college_updates.php'],
+        true
+    )): ?>
+        <link
+            rel="stylesheet"
+            href="<?= e($rootPrefix) ?>assets/college-updates.css"
+        >
+    <?php endif; ?>
 </head>
 
 <body>
 
-    <header
-        class="site-header"
-        style="width: 100%; position: sticky; top: 0; z-index: 1000; background-color: #fff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);"
-    >
+    <header class="site-header">
         <div class="nav-wrap">
 
             <a
@@ -92,7 +119,7 @@ $isActive = static function (array $pages) use ($currentPage): string {
                 class="main-nav"
                 id="mainNav"
                 aria-label="Main navigation"
-                style="margin-left: 20px;"
+                style="margin-left: 60px;"
             >
                 <a
                     <?= $isActive(['index.php']) ?>
@@ -116,6 +143,13 @@ $isActive = static function (array $pages) use ($currentPage): string {
                 </a>
 
                 <a
+                    <?= $isActive(['college_updates.php', 'college_update.php']) ?>
+                    href="<?= $rootPrefix ?>college_updates.php"
+                >
+                    College updates
+                </a>
+
+                <a
                     <?= $isActive(['leaderboard.php']) ?>
                     href="<?= $rootPrefix ?>leaderboard.php"
                 >
@@ -136,8 +170,11 @@ $isActive = static function (array $pages) use ($currentPage): string {
                     My activity
                 </a>
 
-                <a href="<?= $rootPrefix ?>index.php#categories">
-                    Topics
+               <a
+                    <?= $isActive(['report.php']) ?>
+                    href="<?= e($rootPrefix) ?>report.php"
+                >
+                    Report
                 </a>
 
                 <?php if ($navUser): ?>
@@ -166,12 +203,11 @@ $isActive = static function (array $pages) use ($currentPage): string {
 
                 <?php endif; ?>
 
-                <a href="<?= $rootPrefix ?>index.php#campus-updates">
+                <!-- <a href="<?= $rootPrefix ?>index.php#campus-updates">
                     Campus updates
-                </a>
+                </a> -->
 
                 <div class="nav-actions">
-
                     <?php if ($navUser): ?>
 
                         <details class="nav-account">
@@ -245,7 +281,6 @@ $isActive = static function (array $pages) use ($currentPage): string {
                         <a
                             class="btn btn-small btn-primary"
                             href="<?= $rootPrefix ?>register.php"
-                            style="color: white;"
                         >
                             Join community
                             <span aria-hidden="true">↗</span>
@@ -255,6 +290,23 @@ $isActive = static function (array $pages) use ($currentPage): string {
 
                 </div>
             </nav>
+
+            <button
+                class="theme-toggle"
+                id="themeToggle"
+                type="button"
+                aria-label="Switch to dark mode"
+                aria-pressed="false"
+                title="Switch to dark mode"
+            >
+                <svg class="theme-toggle-icon" data-theme-icon="light" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+                </svg>
+                <svg class="theme-toggle-icon" data-theme-icon="dark" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden>
+                    <path d="M20.2 15.1A8.5 8.5 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z"></path>
+                </svg>
+            </button>
 
         </div>
     </header>

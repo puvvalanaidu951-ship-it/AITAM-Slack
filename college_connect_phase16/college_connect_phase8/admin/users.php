@@ -49,8 +49,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Read the search query.
 $q = trim((string) ($_GET['q'] ?? ''));
 
-// Build the member search query.
-$sql = '
+// Apply member search before counting and limiting results.
+$whereSql = '';
+$params = [];
+
+if ($q !== '') {
+    $whereSql = ' WHERE full_name LIKE :user_name
+                  OR email LIKE :user_email';
+    $params = [
+        ':user_name' => '%' . $q . '%',
+        ':user_email' => '%' . $q . '%',
+    ];
+}
+
+$countSql = 'SELECT COUNT(*) FROM users' . $whereSql;
+$recordsSql = '
     SELECT
         id,
         full_name,
@@ -60,31 +73,19 @@ $sql = '
         department,
         created_at
     FROM users
+' . $whereSql . '
+    ORDER BY created_at DESC, id DESC
+    LIMIT :pagination_limit OFFSET :pagination_offset
 ';
-
-$params = [];
-
-if ($q !== '') {
-    $sql .= '
-        WHERE full_name LIKE ?
-           OR email LIKE ?
-    ';
-
-    $params = [
-        '%' . $q . '%',
-        '%' . $q . '%'
-    ];
-}
-
-$sql .= '
-    ORDER BY created_at DESC
-    LIMIT 200
-';
-
-$stmt = db()->prepare($sql);
-$stmt->execute($params);
-
-$users = $stmt->fetchAll();
+$userResult = getPaginatedRecords(
+    $countSql,
+    $recordsSql,
+    $params,
+    25,
+    [10, 20, 25, 50, 100]
+);
+$users = $userResult['records'];
+$pagination = $userResult['pagination'];
 
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -101,6 +102,7 @@ require __DIR__ . '/../includes/header.php';
     </p>
 
 </section>
+<?php include __DIR__ . '/admin-nav.php'; ?>
 
 <section class="section-block">
 
@@ -112,6 +114,11 @@ require __DIR__ . '/../includes/header.php';
             name="q"
             value="<?= e($q) ?>"
             placeholder="Search name or email"
+        >
+        <input
+            type="hidden"
+            name="per_page"
+            value="<?= (int) $pagination['per_page'] ?>"
         >
 
         <button
@@ -141,6 +148,12 @@ require __DIR__ . '/../includes/header.php';
                 </thead>
 
                 <tbody>
+
+                    <?php if (!$users): ?>
+                        <tr>
+                            <td colspan="5">No members match this search.</td>
+                        </tr>
+                    <?php endif; ?>
 
                     <?php foreach ($users as $u): ?>
                         <tr>
@@ -253,6 +266,8 @@ require __DIR__ . '/../includes/header.php';
         </div>
 
     </div>
+
+    <?= renderPagination($pagination, 'page', 'per_page', 'Members') ?>
 
 </section>
 

@@ -195,8 +195,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('moderation.php');
 }
 
-// Fetch questions for moderation
-$questions = db()->query(
+// Paginate question and answer queues independently.
+$questionModeration = getPaginatedRecords(
+    'SELECT COUNT(*) FROM questions',
     'SELECT
         q.id,
         q.title,
@@ -222,12 +223,20 @@ $questions = db()->query(
      ORDER BY
         (q.status = "pending_review") DESC,
         (q.moderation_status = "review") DESC,
-        q.created_at DESC
-     LIMIT 100'
-)->fetchAll();
+        q.created_at DESC,
+        q.id DESC
+     LIMIT :pagination_limit OFFSET :pagination_offset',
+    [],
+    20,
+    [10, 20, 50, 100],
+    'questions_page',
+    'questions_per_page'
+);
+$questions = $questionModeration['records'];
+$questionPagination = $questionModeration['pagination'];
 
-// Fetch answers for moderation
-$answers = db()->query(
+$answerModeration = getPaginatedRecords(
+    'SELECT COUNT(*) FROM answers',
     'SELECT
         a.id,
         a.question_id,
@@ -255,9 +264,17 @@ $answers = db()->query(
      ORDER BY
         (a.status = "pending_review") DESC,
         (a.status = "blocked") DESC,
-        a.created_at DESC
-     LIMIT 100'
-)->fetchAll();
+        a.created_at DESC,
+        a.id DESC
+     LIMIT :pagination_limit OFFSET :pagination_offset',
+    [],
+    20,
+    [10, 20, 50, 100],
+    'answers_page',
+    'answers_per_page'
+);
+$answers = $answerModeration['records'];
+$answerPagination = $answerModeration['pagination'];
 
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -274,11 +291,16 @@ require __DIR__ . '/../includes/header.php';
     </p>
 
 </section>
+<?php include __DIR__ . '/admin-nav.php'; ?>
 
 <section class="section-block">
 
     <!-- Questions moderation -->
     <h2>Questions</h2>
+
+    <?php if (!$questions): ?>
+        <p class="muted">No questions to moderate.</p>
+    <?php endif; ?>
 
     <?php foreach ($questions as $q): ?>
 
@@ -383,8 +405,19 @@ require __DIR__ . '/../includes/header.php';
 
     <?php endforeach; ?>
 
+    <?= renderPagination(
+        $questionPagination,
+        'questions_page',
+        'questions_per_page',
+        'Questions'
+    ) ?>
+
     <!-- Answers moderation -->
     <h2>Answers</h2>
+
+    <?php if (!$answers): ?>
+        <p class="muted">No answers to moderate.</p>
+    <?php endif; ?>
 
     <?php foreach ($answers as $a): ?>
 
@@ -478,6 +511,13 @@ require __DIR__ . '/../includes/header.php';
         </article>
 
     <?php endforeach; ?>
+
+    <?= renderPagination(
+        $answerPagination,
+        'answers_page',
+        'answers_per_page',
+        'Answers'
+    ) ?>
 
 </section>
 

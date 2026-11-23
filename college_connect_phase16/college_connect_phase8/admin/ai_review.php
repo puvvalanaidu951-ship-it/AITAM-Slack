@@ -35,10 +35,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('ai_review.php');
 }
 
-// Fetch AI question insights
-$rows = db()->query(
+$insightResult = getPaginatedRecords(
+    'SELECT COUNT(*)
+     FROM ai_question_insights i
+     JOIN questions q ON q.id = i.question_id',
     'SELECT
-        i.*,
+        i.id,
+        i.question_id,
+        i.suggested_category_id,
+        i.classification_confidence,
+        i.duplicate_question_id,
+        i.duplicate_score,
+        i.risk_level,
+        i.risk_flags_json,
+        i.risk_reason,
+        i.suggested_answer,
+        i.review_status,
         q.title,
         q.body,
         q.status AS question_status,
@@ -54,9 +66,14 @@ $rows = db()->query(
      ORDER BY
         (i.risk_level = "review") DESC,
         (i.review_status = "pending") DESC,
-        i.created_at DESC
-     LIMIT 100'
-)->fetchAll();
+        i.created_at DESC,
+        i.id DESC
+     LIMIT :pagination_limit OFFSET :pagination_offset',
+    [],
+    20
+);
+$rows = $insightResult['records'];
+$pagination = $insightResult['pagination'];
 
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -73,6 +90,7 @@ require __DIR__ . '/../includes/header.php';
     </p>
 
 </section>
+<?php include __DIR__ . '/admin-nav.php'; ?>
 
 <section class="section-block">
 
@@ -268,6 +286,8 @@ require __DIR__ . '/../includes/header.php';
         </article>
 
     <?php endforeach; ?>
+
+    <?= renderPagination($pagination, 'page', 'per_page', 'AI insights') ?>
 
 </section>
 

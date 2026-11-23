@@ -90,10 +90,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('answer_review.php');
 }
 
-// Fetch AI answer reviews
-$rows = db()->query(
+$reviewResult = getPaginatedRecords(
+    'SELECT COUNT(*)
+     FROM ai_answer_reviews r
+     JOIN answers a ON a.id = r.answer_id
+     JOIN questions q ON q.id = r.question_id',
     'SELECT
-        r.*,
+        r.id,
+        r.question_id,
+        r.relevance_score,
+        r.relevance_status,
+        r.risk_level,
+        r.risk_flags_json,
+        r.reason,
+        r.decision,
+        r.created_at,
         a.body AS answer_body,
         a.status AS answer_status,
         q.title AS question_title,
@@ -112,9 +123,14 @@ $rows = db()->query(
      ORDER BY
         (r.decision = "pending_review") DESC,
         (r.risk_level = "review") DESC,
-        r.created_at DESC
-     LIMIT 150'
-)->fetchAll();
+        r.created_at DESC,
+        r.id DESC
+     LIMIT :pagination_limit OFFSET :pagination_offset',
+    [],
+    20
+);
+$rows = $reviewResult['records'];
+$pagination = $reviewResult['pagination'];
 
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -131,6 +147,7 @@ require __DIR__ . '/../includes/header.php';
     </p>
 
 </section>
+<?php include __DIR__ . '/admin-nav.php'; ?>
 
 <section class="section-block">
 
@@ -315,6 +332,8 @@ require __DIR__ . '/../includes/header.php';
         </article>
 
     <?php endforeach; ?>
+
+    <?= renderPagination($pagination, 'page', 'per_page', 'Answer reviews') ?>
 
 </section>
 

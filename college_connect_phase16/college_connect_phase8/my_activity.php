@@ -14,18 +14,25 @@ $savedCount = 0;
 $votesCast = 0;
 
 try {
-    $q = db()->prepare("
-        SELECT id, title, status, created_at
-        FROM questions
-        WHERE user_id = ?
-        ORDER BY created_at DESC
-        LIMIT 10
-    ");
-    $q->execute([$uid]);
-    $myQuestions = $q->fetchAll();
+    $questionActivity = getPaginatedRecords(
+        'SELECT COUNT(*) FROM questions WHERE user_id = :activity_question_user',
+        'SELECT id, title, status, created_at
+         FROM questions
+         WHERE user_id = :activity_question_user
+         ORDER BY created_at DESC, id DESC
+         LIMIT :pagination_limit OFFSET :pagination_offset',
+        [':activity_question_user' => $uid],
+        10,
+        [10, 20, 50, 100],
+        'questions_page',
+        'questions_per_page'
+    );
+    $myQuestions = $questionActivity['records'];
+    $questionPagination = $questionActivity['pagination'];
 
-    $a = db()->prepare("
-        SELECT
+    $answerActivity = getPaginatedRecords(
+        'SELECT COUNT(*) FROM answers WHERE user_id = :activity_answer_user',
+        'SELECT
             a.id,
             a.body,
             a.status,
@@ -35,12 +42,17 @@ try {
             q.title AS question_title
         FROM answers a
         JOIN questions q ON q.id = a.question_id
-        WHERE a.user_id = ?
-        ORDER BY a.created_at DESC
-        LIMIT 10
-    ");
-    $a->execute([$uid]);
-    $myAnswers = $a->fetchAll();
+        WHERE a.user_id = :activity_answer_user
+        ORDER BY a.created_at DESC, a.id DESC
+        LIMIT :pagination_limit OFFSET :pagination_offset',
+        [':activity_answer_user' => $uid],
+        10,
+        [10, 20, 50, 100],
+        'answers_page',
+        'answers_per_page'
+    );
+    $myAnswers = $answerActivity['records'];
+    $answerPagination = $answerActivity['pagination'];
 
     $s = db()->prepare("
         SELECT COUNT(*)
@@ -64,6 +76,20 @@ try {
     $savedCount = 0;
     $votesCast = 0;
     $loadError = true;
+    $questionPagination = getPaginationData(
+        0,
+        10,
+        [10, 20, 50, 100],
+        'questions_page',
+        'questions_per_page'
+    );
+    $answerPagination = getPaginationData(
+        0,
+        10,
+        [10, 20, 50, 100],
+        'answers_page',
+        'answers_per_page'
+    );
 
     error_log('My activity load failed: ' . $ex->getMessage());
 }
@@ -78,10 +104,10 @@ require __DIR__ . '/includes/header.php';
 ========================================= */
 
 .my-activity-page {
-    --activity-navy: #0f2854;
-    --activity-blue: #1c4d8d;
-    --activity-accent: #4988c4;
-    --activity-light: #bde8f5;
+    --activity-navy: #1B365D;
+    --activity-blue: #005A9C;
+    --activity-accent: #60C1E5;
+    --activity-light: #A0E0EF;
     --activity-text: #172e55;
     --activity-muted: #657b99;
     --activity-border: #dce7f3;
@@ -784,7 +810,7 @@ require __DIR__ . '/includes/header.php';
 
             <div class="activity-section-heading">
                 <div class="activity-heading-copy">
-                    <h2>My Recent Questions</h2>
+                    <h2>My Questions</h2>
                     <p>
                         Review your latest questions and their current statuses.
                     </p>
@@ -865,6 +891,13 @@ require __DIR__ . '/includes/header.php';
 
             <?php endif; ?>
 
+            <?= renderPagination(
+                $questionPagination,
+                'questions_page',
+                'questions_per_page',
+                'Questions'
+            ) ?>
+
         </section>
 
         <hr class="activity-divider">
@@ -875,7 +908,7 @@ require __DIR__ . '/includes/header.php';
 
             <div class="activity-section-heading">
                 <div class="activity-heading-copy">
-                    <h2>My Recent Answers</h2>
+                    <h2>My Answers</h2>
                     <p>
                         Track your contributions and accepted solutions
                         across community questions.
@@ -979,6 +1012,13 @@ require __DIR__ . '/includes/header.php';
                 </div>
 
             <?php endif; ?>
+
+            <?= renderPagination(
+                $answerPagination,
+                'answers_page',
+                'answers_per_page',
+                'Answers'
+            ) ?>
 
         </section>
 

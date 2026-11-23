@@ -60,11 +60,15 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
   </div>
   <aside class="announcements-panel" id="campus-updates">
-    <div class="section-heading compact"><div><span class="eyebrow">STAY INFORMED</span><h2>Campus updates</h2></div><span class="live-dot"></span></div>
-    <?php foreach ($announcements as $a): ?>
-      <article class="announcement"><span class="announcement-label"><?= e($a['label']) ?></span><h3><?= e($a['title']) ?></h3><p><?= e($a['body']) ?></p><time><?= e(date('M j, Y', strtotime($a['created_at']))) ?></time></article>
-    <?php endforeach; ?>
+    <div class="section-heading compact"><div><span class="eyebrow">STAY INFORMED</span><h2>Campus updates</h2></div><a class="text-link" href="college_updates.php">College Updates <span>→</span></a></div>
+    <?php if (!$announcements): ?>
+      <p class="empty-state">No college updates have been published yet.</p>
+    <?php else: ?>
+      <?php foreach ($announcements as $a): ?>
+        <article class="announcement"><span class="announcement-label"><?= e($a['label']) ?></span><h3><?= e($a['title']) ?></h3><p><?= e(shorten((string) $a['body'], 180)) ?></p><time datetime="<?= e(date('c', strtotime($a['created_at']))) ?>"><?= e(date('M j, Y', strtotime($a['created_at']))) ?></time></article>
+      <?php endforeach; ?>
+    <?php endif; ?>
   </aside>
 </section>
-<section class="cta-banner"><div><span class="eyebrow">YOUR EXPERIENCE MATTERS</span><h2 style="color: #6aaffa;">Have a question? Start a conversation.</h2><p>Help make college life easier by sharing what you know.</p></div><a href="questions.php" class="btn btn-light">Explore the community <span>→</span></a></section>
+<section class="cta-banner"><div><span class="eyebrow">YOUR EXPERIENCE MATTERS</span><h2>Have a question? Start a conversation.</h2><p>Help make college life easier by sharing what you know.</p></div><a href="questions.php" class="btn btn-light">Explore the community <span>→</span></a></section>
 <?php require __DIR__ . '/includes/footer.php'; ?>

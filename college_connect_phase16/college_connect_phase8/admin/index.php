@@ -25,10 +25,24 @@ $stats = [
         'SELECT COUNT(*) FROM answers'
     )->fetchColumn(),
 
-    'Open reports' => (int) db()->query(
-        'SELECT COUNT(*)
-         FROM reports
-         WHERE status IN ("open", "reviewing")'
+    'Total reports' => (int) db()->query(
+        'SELECT COUNT(*) FROM reports'
+    )->fetchColumn(),
+
+    'Pending reports' => (int) db()->query(
+        'SELECT COUNT(*) FROM reports WHERE status = "pending"'
+    )->fetchColumn(),
+
+    'Under-review reports' => (int) db()->query(
+        'SELECT COUNT(*) FROM reports WHERE status = "reviewing"'
+    )->fetchColumn(),
+
+    'Resolved reports' => (int) db()->query(
+        'SELECT COUNT(*) FROM reports WHERE status = "resolved"'
+    )->fetchColumn(),
+
+    'Rejected reports' => (int) db()->query(
+        'SELECT COUNT(*) FROM reports WHERE status = "rejected"'
     )->fetchColumn(),
 
     'Pending review' => (int) db()->query(
@@ -85,41 +99,8 @@ require __DIR__ . '/../includes/header.php';
     </div>
 
     <!-- Administrative navigation -->
-    <div class="admin-actions">
-
-        <a class="btn btn-primary" href="moderation.php">
-            Review content
-        </a>
-
-        <a class="btn btn-secondary" href="reports.php">
-            Manage reports
-        </a>
-
-        <a class="btn btn-secondary" href="users.php">
-            Manage members
-        </a>
-
-        <a class="btn btn-secondary" href="announcements.php">
-            Announcements
-        </a>
-
-        <a class="btn btn-secondary" href="appeals.php">
-            Content appeals
-        </a>
-
-        <a class="btn btn-secondary" href="ai_review.php">
-            AI question insights
-        </a>
-
-        <a class="btn btn-secondary" href="answer_review.php">
-            AI answer review
-        </a>
-
-        <a class="btn btn-secondary" href="audit_logs.php">
-            Admin audit log
-        </a>
-
-    </div>
+   
+    <?php require __DIR__ . '/admin-nav.php'; ?>
 
     <!-- Recent questions section -->
     <div class="section-heading compact">

@@ -71,13 +71,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch recent announcements
-$items = db()->query(
+$announcementResult = getPaginatedRecords(
+    'SELECT COUNT(*) FROM announcements',
     'SELECT id, title, label, is_published, created_at
      FROM announcements
-     ORDER BY created_at DESC
-     LIMIT 100'
-)->fetchAll();
+     ORDER BY created_at DESC, id DESC
+     LIMIT :pagination_limit OFFSET :pagination_offset',
+    [],
+    20
+);
+$items = $announcementResult['records'];
+$pagination = $announcementResult['pagination'];
 
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -145,6 +149,12 @@ require __DIR__ . '/../includes/header.php';
     </div>
 
     <!-- Display existing announcements -->
+    <?php if (!$items): ?>
+        <div class="empty-state">
+            <h3>No announcements yet</h3>
+        </div>
+    <?php endif; ?>
+
     <?php foreach ($items as $item): ?>
         <article class="account-card report-card">
 
@@ -202,6 +212,8 @@ require __DIR__ . '/../includes/header.php';
 
         </article>
     <?php endforeach; ?>
+
+    <?= renderPagination($pagination, 'page', 'per_page', 'Announcements') ?>
 
 </section>
 

@@ -5,33 +5,62 @@ require_once __DIR__ . '/includes/bootstrap.php';
 $pageTitle = 'Community Achievements';
 $loadError = false;
 
+$baseFromSql = "
+    FROM users u
+    LEFT JOIN (
+        SELECT user_id,
+            COUNT(*) AS answers_count,
+            SUM(is_accepted = 1) AS accepted_count
+        FROM answers
+        WHERE status = 'published'
+        GROUP BY user_id
+    ) answer_totals ON answer_totals.user_id = u.id
+    LEFT JOIN (
+        SELECT a.user_id, COUNT(*) AS helpful_count
+        FROM answer_votes v
+        JOIN answers a ON a.id = v.answer_id
+        WHERE a.status = 'published' AND v.vote = 1
+        GROUP BY a.user_id
+    ) vote_totals ON vote_totals.user_id = u.id
+    LEFT JOIN (
+        SELECT user_id, COUNT(*) AS bookmarks_count
+        FROM question_bookmarks
+        GROUP BY user_id
+    ) bookmark_totals ON bookmark_totals.user_id = u.id
+    WHERE u.status = 'active'
+      AND u.role <> 'admin'
+      AND (
+          COALESCE(answer_totals.answers_count, 0) > 0
+          OR COALESCE(bookmark_totals.bookmarks_count, 0) >= 5
+      )
+";
+
+$countSql = 'SELECT COUNT(*)' . $baseFromSql;
 $sql = "SELECT
     u.id,
     u.full_name,
     u.role,
-    (SELECT COUNT(*) FROM answers a
-        WHERE a.user_id = u.id AND a.status = 'published') AS answers_count,
-    (SELECT COUNT(*) FROM answers a
-        WHERE a.user_id = u.id
-        AND a.status = 'published'
-        AND a.is_accepted = 1) AS accepted_count,
-    (SELECT COUNT(*) FROM answer_votes v
-        INNER JOIN answers a ON a.id = v.answer_id
-        WHERE a.user_id = u.id
-        AND a.status = 'published'
-        AND v.vote = 1) AS helpful_count,
-    (SELECT COUNT(*) FROM question_bookmarks b
-        WHERE b.user_id = u.id) AS bookmarks_count
-    FROM users u
-    WHERE u.status = 'active'
-    AND u.role <> 'admin'
-    ORDER BY u.full_name ASC";
+    COALESCE(answer_totals.answers_count, 0) AS answers_count,
+    COALESCE(answer_totals.accepted_count, 0) AS accepted_count,
+    COALESCE(vote_totals.helpful_count, 0) AS helpful_count,
+    COALESCE(bookmark_totals.bookmarks_count, 0) AS bookmarks_count
+" . $baseFromSql . "
+    ORDER BY u.full_name ASC, u.id ASC
+    LIMIT :pagination_limit OFFSET :pagination_offset";
 
 try {
-    $rows = db()->query($sql)->fetchAll();
+    $achievementResult = getPaginatedRecords(
+        $countSql,
+        $sql,
+        [],
+        20
+    );
+    $rows = $achievementResult['records'];
+    $pagination = $achievementResult['pagination'];
 } catch (Throwable $ex) {
     $rows = [];
     $loadError = true;
+    $pagination = getPaginationData(0, 20);
     error_log('Achievements query failed: ' . $ex->getMessage());
 }
 
@@ -119,10 +148,10 @@ require __DIR__ . '/includes/header.php';
 ======================================== */
 
 .achievements-page {
-    --ach-navy: #0f2854;
-    --ach-blue: #1c4d8d;
-    --ach-accent: #4988c4;
-    --ach-light: #bde8f5;
+    --ach-navy: #1B365D;
+    --ach-blue: #005A9C;
+    --ach-accent: #60C1E5;
+    --ach-light: #A0E0EF;
     --ach-text: #172e55;
     --ach-muted: #657b99;
     --ach-border: #dce7f3;
@@ -687,17 +716,7 @@ require __DIR__ . '/includes/header.php';
 
             <?php if (!$loadError): ?>
                 <span class="ach-count">
-                    <?php
-                    $eligibleCount = 0;
-
-                    foreach ($rows as $member) {
-                        if (count(cc_badges($member)) > 0) {
-                            $eligibleCount++;
-                        }
-                    }
-
-                    echo $eligibleCount;
-                    ?>
+                    <?= number_format((int) $pagination['total']) ?>
                 </span>
             <?php endif; ?>
         </div>
@@ -818,6 +837,8 @@ require __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
 
             </div>
+
+            <?= renderPagination($pagination, 'page', 'per_page', 'Members') ?>
 
             <?php if ($shown === 0): ?>
 

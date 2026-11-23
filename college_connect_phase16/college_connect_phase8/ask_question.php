@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/multilingual.php';
 require_once __DIR__ . '/includes/ai_helpers.php';
 require_once __DIR__ . '/includes/openai_moderation.php';
 
@@ -9,20 +10,55 @@ $errors = [];
 $title = '';
 $body = '';
 $categoryId = 0;
+$interfaceLanguage = cc_multilingual_current_interface_language();
+$languageCode = 'en';
+$savedDraft = $_SESSION['cc_question_draft'] ?? null;
+if (
+    $_SERVER['REQUEST_METHOD'] === 'GET'
+    && is_array($savedDraft)
+) {
+    $title = is_string($savedDraft['title'] ?? null) ? $savedDraft['title'] : '';
+    $body = is_string($savedDraft['body'] ?? null) ? $savedDraft['body'] : '';
+    $categoryId = filter_var(
+        $savedDraft['category_id'] ?? null,
+        FILTER_VALIDATE_INT
+    ) ?: 0;
+    $interfaceLanguage = cc_multilingual_normalize_language(
+        $savedDraft['interface_language'] ?? $interfaceLanguage
+    );
+    $_SESSION['cc_interface_language'] = $interfaceLanguage;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
-    $title = trim((string) ($_POST['title'] ?? ''));
-    $body = trim((string) ($_POST['body'] ?? ''));
+    $interfaceLanguage = cc_multilingual_normalize_language(
+        $_POST['interface_language'] ?? $interfaceLanguage
+    );
+    $_SESSION['cc_interface_language'] = $interfaceLanguage;
+    $titleInput = $_POST['title'] ?? '';
+    $bodyInput = $_POST['body'] ?? '';
+    $title = is_string($titleInput) ? $titleInput : '';
+    $body = is_string($bodyInput) ? $bodyInput : '';
+    $languageCode = cc_multilingual_detect_language($title . "\n" . $body);
     $categoryId = filter_input(INPUT_POST, 'category_id', FILTER_VALIDATE_INT) ?: 0;
+    $_SESSION['cc_question_draft'] = [
+        'title' => $title,
+        'body' => $body,
+        'category_id' => $categoryId,
+        'interface_language' => $interfaceLanguage,
+    ];
 
-    if (mb_strlen($title) < 8 || mb_strlen($title) > 220) {
-        $errors[] = 'Title must be between 8 and 220 characters.';
+    if (!mb_check_encoding($title, 'UTF-8') || !mb_check_encoding($body, 'UTF-8')) {
+        $errors[] = cc_multilingual_message('invalid_encoding', $interfaceLanguage);
     }
 
-    if (mb_strlen($body) < 20 || mb_strlen($body) > 10000) {
-        $errors[] = 'Question details must be between 20 and 10,000 characters.';
+    if (mb_strlen(trim($title)) < 8 || mb_strlen($title) > 220) {
+        $errors[] = cc_multilingual_message('question_title_length', $interfaceLanguage);
+    }
+
+    if (mb_strlen(trim($body)) < 20 || mb_strlen($body) > 10000) {
+        $errors[] = cc_multilingual_message('question_body_length', $interfaceLanguage);
     }
 
     $check = db()->prepare('SELECT id, name FROM categories WHERE id = ? AND is_active = 1');
@@ -30,22 +66,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $catRow = $check->fetch();
 
     if (!$catRow) {
-        $errors[] = 'Choose a valid topic.';
+        $errors[] = cc_multilingual_message('category_required', $interfaceLanguage);
     }
 
     if (!$errors) {
         $categoriesList = get_categories();
-        $catCheck = cc_openai_check_category($title, $body, $categoryId, $categoriesList);
+        $catCheck = cc_openai_check_category(
+            $title,
+            $body,
+            $categoryId,
+            $categoriesList,
+            null,
+            $languageCode
+        );
 
-        if (!$catCheck['matches_selected']) {
+        if (!$catCheck['matches_selected'] && $languageCode === 'en') {
             $suggestedName = $catCheck['relevant_category_name'] ?: 'another topic';
             $reasonText = !empty($catCheck['reason'])
                 ? ' (' . rtrim($catCheck['reason'], '.') . ')'
                 : '';
 
-            $errors[] = 'Your question does not match the selected topic "'
-                . $catRow['name'] . '"' . $reasonText
-                . '. Please select the relevant topic "' . $suggestedName . '" to proceed.';
+            $errors[] = cc_multilingual_message('category_mismatch', $interfaceLanguage)
+                . ' ' . $catRow['name'] . ' -> ' . $suggestedName . $reasonText;
 
             if (!empty($catCheck['relevant_category_id'])) {
                 $categoryId = (int) $catCheck['relevant_category_id'];
@@ -79,6 +121,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $apiUnavailable = empty($risk['api_ok'])
             || (!empty($risk['api_ok']) && empty($risk['flagged']) && empty($quality['api_ok']));
         $decision = cc_phase16_question_decision($risk, $quality);
+        if (
+            $languageCode !== 'en'
+            && empty($risk['flagged'])
+            && ($decision['decision'] ?? '') === 'block'
+        ) {
+            $decision = [
+                'status' => 'pending_review',
+                'moderation_status' => 'review',
+                'decision' => 'review',
+            ];
+        }
 
         if (!cc_phase16_question_can_persist($risk, $quality, $decision)) {
             $reasonCode = empty($risk['api_ok'])
@@ -102,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 set_flash(
                     'error',
-                    'We could not complete the automated safety and quality checks. Your question was not saved; please try again later.'
+                    cc_multilingual_message('checks_unavailable', $interfaceLanguage)
                 );
                 redirect('ask_question.php');
             }
@@ -111,29 +164,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $qStatus = $isBlocked ? 'rejected' : 'pending_review';
             $modStatus = $isBlocked ? 'blocked' : 'review';
 
+            $escalatedQuestionId = 0;
             try {
                 db()->beginTransaction();
 
                 $s = db()->prepare(
-                    'INSERT INTO questions (user_id, category_id, title, body, moderation_status, status) VALUES (?, ?, ?, ?, ?, ?)'
+                    'INSERT INTO questions
+                        (user_id, category_id, title, body, language_code, moderation_status, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)'
                 );
                 $s->execute([
                     (int) $user['id'],
                     $categoryId,
                     $title,
                     $body,
+                    $languageCode,
                     $modStatus,
                     $qStatus,
                 ]);
 
-                $id = (int) db()->lastInsertId();
-                cc_phase16_record_moderation('question', $id, $risk, $quality, $qStatus);
+                $escalatedQuestionId = (int) db()->lastInsertId();
+                cc_phase16_record_moderation('question', $escalatedQuestionId, $risk, $quality, $qStatus);
                 db()->commit();
 
                 try {
-                    cc_ai_save_insight($id, $title, $body, get_categories());
+                    cc_ai_save_insight(
+                        $escalatedQuestionId,
+                        $title,
+                        $body,
+                        get_categories()
+                    );
                 } catch (Throwable $e) {
-                    // AI insight generation is optional; moderation has already been recorded.
+                    error_log(
+                        'AITAM SLACK AI assist: '
+                        . cc_openai_sanitize_error($e->getMessage())
+                    );
                 }
             } catch (Throwable $e) {
                 if (db()->inTransaction()) {
@@ -143,10 +208,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log('AITAM SLACK escalated question insertion failed: ' . $e->getMessage());
             }
 
+            if ($escalatedQuestionId < 1) {
+                set_flash(
+                    'error',
+                    cc_multilingual_message('save_failed', $interfaceLanguage)
+                );
+                redirect('ask_question.php');
+            }
+            unset($_SESSION['cc_question_draft']);
+
             cc_phase16_log_submission_decision(
                 'question',
                 (int) $user['id'],
-                'blocked',
+                $isBlocked ? 'blocked' : 'retry',
                 $reasonCode,
                 true
             );
@@ -154,8 +228,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             set_flash(
                 'error',
                 $isBlocked
-                    ? 'Your question was flagged by automated checks as unwanted or inappropriate content and has been blocked from public view.'
-                    : 'Your question was flagged for automated review and has been escalated to moderators. It is hidden and will not be displayed publicly until approved.'
+                    ? cc_multilingual_message('question_blocked', $interfaceLanguage)
+                    : cc_multilingual_message('question_review', $interfaceLanguage)
             );
             redirect('ask_question.php');
         }
@@ -164,9 +238,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->beginTransaction();
 
             $s = db()->prepare(
-                'INSERT INTO questions (user_id, category_id, title, body, moderation_status, status) VALUES (?, ?, ?, ?, "allowed", "published")'
+                'INSERT INTO questions
+                    (user_id, category_id, title, body, language_code, moderation_status, status)
+                 VALUES (?, ?, ?, ?, ?, "allowed", "published")'
             );
-            $s->execute([(int) $user['id'], $categoryId, $title, $body]);
+            $s->execute([
+                (int) $user['id'],
+                $categoryId,
+                $title,
+                $body,
+                $languageCode,
+            ]);
             $id = (int) db()->lastInsertId();
 
             cc_phase16_record_moderation('question', $id, $risk, $quality, 'published');
@@ -177,10 +259,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             error_log('AITAM SLACK question insertion failed: ' . $databaseError->getMessage());
-            $errors[] = 'Your question could not be saved right now. Please try again later.';
+            $errors[] = cc_multilingual_message('save_failed', $interfaceLanguage);
         }
 
         if (!$errors) {
+            unset($_SESSION['cc_question_draft']);
             try {
                 cc_ai_save_insight($id, $title, $body, get_categories());
             } catch (Throwable $aiError) {
@@ -189,9 +272,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$errors) {
+            unset($_SESSION['cc_question_draft']);
             set_flash(
                 'success',
-                'Your question has been published after automated safety and question-quality checks. Automated checks can still make mistakes.'
+                cc_multilingual_message('question_saved', $interfaceLanguage)
             );
             redirect('question.php?id=' . $id);
         }
@@ -222,6 +306,15 @@ require __DIR__ . '/includes/header.php';
 
         <form method="post" class="account-form">
             <?= csrf_field() ?>
+
+            <label for="interface-language">Language for messages</label>
+            <select id="interface-language" name="interface_language">
+                <?php foreach (cc_multilingual_languages() as $code => $name): ?>
+                    <option value="<?= e($code) ?>" <?= $interfaceLanguage === $code ? 'selected' : '' ?>>
+                        <?= e($name) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
 
             <label for="title">Question title</label>
             <input
