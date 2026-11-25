@@ -791,7 +791,7 @@ require __DIR__ . '/includes/header.php';
      COLLEGE CONNECT LOGIN UI
 ===================================================== -->
 
-<section class="auth-shell login-shell cc-login-page" style="margin-top: -65px !important;height:110vh;margin-bottom: 1px !important;">
+<section class="auth-shell login-shell cc-login-page" style="margin-top: 0px !important;height:110vh;margin-bottom: 1px !important;">
 
     <!-- LEFT: WELCOME SECTION -->
 

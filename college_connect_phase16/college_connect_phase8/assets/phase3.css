@@ -2869,3 +2869,381 @@ html[data-theme] .my-activity-page .activity-item:hover {
     background: var(--surface-elevated);
     color: var(--body-text);
 }
+
+/* =========================================
+   COLLEGE CONNECT - PROFILE PILL FIX
+========================================= */
+
+.site-header .nav-account.cc-profile-menu {
+    position: relative !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+    width: auto !important;
+}
+
+/* Main pill */
+
+.site-header .nav-account.cc-profile-menu > summary.cc-profile-trigger {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+
+    gap: 11px !important;
+
+    width: auto !important;
+    min-width: 215px !important;
+    min-height: 58px !important;
+
+    padding: 6px 13px 6px 7px !important;
+
+    background: #EAF2F9 !important;
+
+    border: 1px solid #D9E5F0 !important;
+    border-radius: 50px !important;
+
+    list-style: none !important;
+    cursor: pointer !important;
+
+    box-sizing: border-box !important;
+}
+
+/* Remove default marker */
+
+.site-header .cc-profile-trigger::-webkit-details-marker {
+    display: none !important;
+}
+
+/* Circular avatar */
+
+.site-header .cc-profile-trigger .cc-profile-avatar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    flex: 0 0 44px !important;
+
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    border-radius: 50% !important;
+
+    background: linear-gradient(
+        135deg,
+        #173F70,
+        #397DBB
+    ) !important;
+
+    color: #FFFFFF !important;
+
+    font-size: 15px !important;
+    font-weight: 800 !important;
+
+    line-height: 1 !important;
+}
+
+/* User details */
+
+.site-header .cc-profile-trigger .cc-profile-info {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+
+    flex: 1 1 auto !important;
+
+    min-width: 0 !important;
+    gap: 2px !important;
+
+    background: transparent !important;
+}
+
+/* Username */
+
+.site-header .cc-profile-trigger .cc-profile-name {
+    display: block !important;
+
+    color: #26394F !important;
+
+    font-size: 14px !important;
+    font-weight: 800 !important;
+
+    line-height: 1.3 !important;
+
+    text-transform: none !important;
+    white-space: nowrap !important;
+}
+
+/* Role */
+
+.site-header .cc-profile-trigger .cc-profile-role {
+    display: block !important;
+
+    color: #687B90 !important;
+
+    font-size: 12px !important;
+    font-weight: 500 !important;
+
+    line-height: 1.3 !important;
+
+    text-transform: capitalize !important;
+}
+
+/* Dropdown arrow */
+
+.site-header .cc-profile-trigger .cc-profile-arrow {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    flex: 0 0 16px !important;
+
+    width: 16px !important;
+    height: 16px !important;
+
+    color: #718196 !important;
+}
+
+.site-header .cc-profile-arrow svg {
+    display: block !important;
+
+    width: 15px !important;
+    height: 15px !important;
+
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-width: 2 !important;
+}
+
+/* Hover */
+
+.site-header .cc-profile-menu > summary:hover {
+    background: #DFEBF6 !important;
+}
+
+/* Dropdown */
+
+.site-header .cc-profile-menu[open] .account-dropdown {
+    position: absolute !important;
+    top: calc(100% + 10px) !important;
+    right: 0 !important;
+
+    z-index: 9999 !important;
+
+    min-width: 210px !important;
+
+    background: #FFFFFF !important;
+
+    border: 1px solid #E1E8F0 !important;
+    border-radius: 12px !important;
+
+    padding: 8px !important;
+
+    box-shadow: 0 12px 30px rgba(0,0,0,0.14) !important;
+}
+
+/* Mobile */
+
+@media(max-width: 650px) {
+    .site-header .nav-account.cc-profile-menu > summary {
+        min-width: 0 !important;
+    }
+
+    .site-header .cc-profile-trigger .cc-profile-avatar {
+        flex-basis: 38px !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+    }
+}
+
+/* ==========================================
+   COLLEGE CONNECT - PROFILE NAVBAR PILL
+   ========================================== */
+
+.site-header .nav-account.cc-profile-menu {
+    position: relative !important;
+    display: inline-block !important;
+    flex-shrink: 0;
+    margin: 0 !important;
+}
+
+/* Profile pill */
+
+.site-header .cc-profile-menu > .cc-profile-trigger {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+
+    width: auto !important;
+    min-width: 215px;
+    min-height: 58px;
+
+    padding: 6px 13px 6px 7px !important;
+
+    background: #eaf2f9 !important;
+    border: 1px solid #d9e5ef !important;
+    border-radius: 50px !important;
+
+    cursor: pointer;
+    list-style: none !important;
+    box-sizing: border-box;
+
+    transition: background .2s ease, box-shadow .2s ease;
+}
+
+/* Remove browser default arrow */
+
+.site-header .cc-profile-trigger::-webkit-details-marker {
+    display: none !important;
+}
+
+.site-header .cc-profile-trigger::marker {
+    content: "" !important;
+}
+
+/* Avatar */
+
+.site-header .cc-profile-avatar {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border-radius: 50% !important;
+
+    background: linear-gradient(
+        135deg,
+        #183b68,
+        #3479bb
+    ) !important;
+
+    color: #ffffff !important;
+
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    font-family: 'Manrope', sans-serif;
+
+    line-height: 1 !important;
+}
+
+/* Name and role wrapper */
+
+.site-header .cc-profile-info {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+
+    gap: 2px !important;
+
+    min-width: 0;
+    flex: 1;
+}
+
+/* Username */
+
+.site-header .cc-profile-name {
+    display: block !important;
+
+    color: #24364b !important;
+
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    line-height: 18px !important;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    max-width: 145px;
+}
+
+/* User role */
+
+.site-header .cc-profile-role {
+    display: block !important;
+
+    color: #64758a !important;
+
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 16px !important;
+}
+
+/* Dropdown arrow */
+
+.site-header .cc-profile-arrow {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 16px !important;
+    height: 16px !important;
+
+    flex-shrink: 0;
+    color: #64758a !important;
+}
+
+.site-header .cc-profile-arrow svg {
+    display: block !important;
+
+    width: 16px !important;
+    height: 16px !important;
+
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-width: 2 !important;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Hover */
+
+.site-header .cc-profile-menu > .cc-profile-trigger:hover {
+    background: #e1edf8 !important;
+    box-shadow: 0 2px 8px rgba(31, 75, 120, .08);
+}
+
+/* Keyboard focus */
+
+.site-header .cc-profile-trigger:focus-visible {
+    outline: 3px solid rgba(37, 99, 170, .3);
+    outline-offset: 3px;
+}
+
+/* Open dropdown arrow */
+
+.site-header .cc-profile-menu[open] .cc-profile-arrow svg {
+    transform: rotate(180deg);
+}
+
+/* Mobile responsive */
+
+@media (max-width: 768px) {
+
+    .site-header .cc-profile-menu > .cc-profile-trigger {
+        min-width: 195px !important;
+        min-height: 54px !important;
+    }
+
+    .site-header .cc-profile-avatar {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+    }
+
+    .site-header .cc-profile-name {
+        max-width: 120px;
+    }
+
+}
+
