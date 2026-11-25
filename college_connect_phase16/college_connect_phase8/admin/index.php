@@ -25,10 +25,24 @@ $stats = [
         'SELECT COUNT(*) FROM answers'
     )->fetchColumn(),
 
-    'Open reports' => (int) db()->query(
-        'SELECT COUNT(*)
-         FROM reports
-         WHERE status IN ("open", "reviewing")'
+    'Total reports' => (int) db()->query(
+        'SELECT COUNT(*) FROM reports'
+    )->fetchColumn(),
+
+    'Pending reports' => (int) db()->query(
+        'SELECT COUNT(*) FROM reports WHERE status = "pending"'
+    )->fetchColumn(),
+
+    'Under-review reports' => (int) db()->query(
+        'SELECT COUNT(*) FROM reports WHERE status = "reviewing"'
+    )->fetchColumn(),
+
+    'Resolved reports' => (int) db()->query(
+        'SELECT COUNT(*) FROM reports WHERE status = "resolved"'
+    )->fetchColumn(),
+
+    'Rejected reports' => (int) db()->query(
+        'SELECT COUNT(*) FROM reports WHERE status = "rejected"'
     )->fetchColumn(),
 
     'Pending review' => (int) db()->query(
@@ -84,6 +98,9 @@ require __DIR__ . '/../includes/header.php';
 
     </div>
 
+    <!-- Administrative navigation -->
+   
+    <?php require __DIR__ . '/admin-nav.php'; ?>
 
     <!-- Recent questions section -->
     <div class="section-heading compact">

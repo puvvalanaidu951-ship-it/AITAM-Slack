@@ -15,58 +15,63 @@ $params = [];
 
 // Filter by action
 if ($action !== '') {
-    $where[] = 'l.action LIKE ?';
-    $params[] = '%' . $action . '%';
+    $where[] = 'l.action LIKE :audit_action';
+    $params[':audit_action'] = '%' . $action . '%';
 }
 
 // Search by administrator, entity type, or details
 if ($search !== '') {
     $where[] = '(
-        u.full_name LIKE ?
-        OR u.email LIKE ?
-        OR l.entity_type LIKE ?
-        OR l.details LIKE ?
+        u.full_name LIKE :audit_name
+        OR u.email LIKE :audit_email
+        OR l.entity_type LIKE :audit_entity
+        OR l.details LIKE :audit_details
     )';
 
-    array_push(
-        $params,
-        '%' . $search . '%',
-        '%' . $search . '%',
-        '%' . $search . '%',
-        '%' . $search . '%'
-    );
+    $params[':audit_name'] = '%' . $search . '%';
+    $params[':audit_email'] = '%' . $search . '%';
+    $params[':audit_entity'] = '%' . $search . '%';
+    $params[':audit_details'] = '%' . $search . '%';
 }
 
 // Build the audit log query
-$sql = '
+// Apply filters when provided
+$whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
+$countSql = '
+    SELECT COUNT(*)
+    FROM admin_audit_logs l
+    LEFT JOIN users u ON u.id = l.actor_id
+' . $whereSql;
+$recordsSql = '
     SELECT
-        l.*,
+        l.action,
+        l.entity_type,
+        l.entity_id,
+        l.details,
+        l.ip_address,
+        l.created_at,
         u.full_name,
         u.email
     FROM admin_audit_logs l
-    LEFT JOIN users u
-        ON u.id = l.actor_id
-';
-
-// Apply filters when provided
-if ($where) {
-    $sql .= ' WHERE ' . implode(' AND ', $where);
-}
-
-// Sort newest records first
-$sql .= '
+    LEFT JOIN users u ON u.id = l.actor_id
+' . $whereSql . '
     ORDER BY l.created_at DESC, l.id DESC
-    LIMIT 300
+    LIMIT :pagination_limit OFFSET :pagination_offset
 ';
 
-// Execute query
-$stmt = db()->prepare($sql);
-$stmt->execute($params);
-
-$logs = $stmt->fetchAll();
+$logResult = getPaginatedRecords(
+    $countSql,
+    $recordsSql,
+    $params,
+    25,
+    [10, 20, 25, 50, 100]
+);
+$logs = $logResult['records'];
+$pagination = $logResult['pagination'];
 
 require __DIR__ . '/../includes/header.php';
 ?>
+
 
 <section class="page-hero">
 
@@ -75,12 +80,11 @@ require __DIR__ . '/../includes/header.php';
     <h1>Admin audit log</h1>
 
     <p>
-        Review recorded administrative decisions, including
-        appeal outcomes. Up to 300 matching records are shown.
+        Review recorded administrative decisions, including appeal outcomes.
     </p>
 
 </section>
-
+<?php include __DIR__ . '/admin-nav.php'; ?>
 <section class="section-block">
 
     <!-- Audit log filters -->
@@ -117,6 +121,12 @@ require __DIR__ . '/../includes/header.php';
             >
 
         </div>
+
+        <input
+            type="hidden"
+            name="per_page"
+            value="<?= (int) $pagination['per_page'] ?>"
+        >
 
         <button class="btn btn-primary" type="submit">
             Filter
@@ -219,6 +229,8 @@ require __DIR__ . '/../includes/header.php';
         </div>
 
     </div>
+
+    <?= renderPagination($pagination, 'page', 'per_page', 'Audit records') ?>
 
 </section>
 

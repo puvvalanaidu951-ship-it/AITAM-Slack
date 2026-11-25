@@ -30,16 +30,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('notifications.php');
 }
 
-$s = db()->prepare(
-    'SELECT *
+$notificationParams = [':notification_user_id' => (int) $user['id']];
+$unreadStatement = db()->prepare(
+    'SELECT COUNT(*)
      FROM notifications
-     WHERE user_id = ?
-     ORDER BY created_at DESC
-     LIMIT 100'
+     WHERE user_id = :notification_user_id
+       AND is_read = 0'
 );
-
-$s->execute([(int) $user['id']]);
-$items = $s->fetchAll();
+$unreadStatement->execute($notificationParams);
+$unreadCount = (int) $unreadStatement->fetchColumn();
+$notificationResult = getPaginatedRecords(
+    'SELECT COUNT(*) FROM notifications WHERE user_id = :notification_user_id',
+    'SELECT id, type, title, message, related_type, related_id, is_read, created_at
+     FROM notifications
+     WHERE user_id = :notification_user_id
+     ORDER BY created_at DESC, id DESC
+     LIMIT :pagination_limit OFFSET :pagination_offset',
+    $notificationParams,
+    15,
+    [10, 15, 20, 50, 100]
+);
+$items = $notificationResult['records'];
+$pagination = $notificationResult['pagination'];
 
 require __DIR__ . '/includes/header.php';
 ?>
@@ -55,10 +67,7 @@ require __DIR__ . '/includes/header.php';
         <div>
             <h2>Recent activity</h2>
             <p>
-                <?= count(array_filter(
-                    $items,
-                    fn($n) => (int) $n['is_read'] === 0
-                )) ?>
+                <?= $unreadCount ?>
                 unread notifications
             </p>
         </div>
@@ -119,6 +128,7 @@ require __DIR__ . '/includes/header.php';
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
+    <?= renderPagination($pagination, 'page', 'per_page', 'Notifications') ?>
 </section>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

@@ -171,7 +171,7 @@ require __DIR__ . '/includes/header.php';
     border-radius: 7px;
     background: transparent;
 
-    color: #4988c4;
+    color: var(--interactive-accent);
     font-family: inherit;
     font-size: 12px;
     font-weight: 700;
@@ -183,17 +183,17 @@ require __DIR__ . '/includes/header.php';
 }
 
 .auth-shell .password-toggle:hover {
-    color: #1c4d8d;
-    background-color: #edf6ff;
+    color: var(--interactive-accent-hover);
+    background-color: var(--hover-background);
 }
 
 .auth-shell .password-toggle:focus-visible {
-    outline: 2px solid #4988c4;
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
 }
 
 .auth-shell .password-toggle:active {
-    background-color: #dceeff;
+    background-color: var(--background-secondary);
 }
 
 /* Prevent long registration content from breaking the layout */
@@ -215,7 +215,7 @@ require __DIR__ . '/includes/header.php';
 /* Smooth focus feedback */
 
 .auth-shell .password-wrapper input:focus {
-    outline-color: #4988c4;
+    outline-color: var(--focus-ring);
 }
 
 @media (prefers-reduced-motion: reduce) {

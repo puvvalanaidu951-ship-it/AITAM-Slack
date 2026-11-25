@@ -1,6 +1,39 @@
 (() => {
+  const root = document.documentElement;
+  const themeToggle = document.getElementById('themeToggle');
   const toggle = document.getElementById('menuToggle');
   const nav = document.getElementById('mainNav');
+
+  const applyTheme = (selectedTheme, persist = false) => {
+    root.setAttribute('data-theme', selectedTheme);
+    if (themeToggle) {
+      const lightIcon = themeToggle.querySelector('[data-theme-icon="light"]');
+      const darkIcon = themeToggle.querySelector('[data-theme-icon="dark"]');
+      if (lightIcon) lightIcon.toggleAttribute('hidden', selectedTheme !== 'light');
+      if (darkIcon) darkIcon.toggleAttribute('hidden', selectedTheme !== 'dark');
+      themeToggle.setAttribute('aria-label', selectedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+      themeToggle.setAttribute('aria-pressed', String(selectedTheme === 'dark'));
+      themeToggle.setAttribute('title', selectedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    }
+
+    if (persist) {
+      try {
+        localStorage.setItem('aitam-theme', selectedTheme);
+      } catch (error) {
+        console.warn('Theme preference could not be saved.', error);
+      }
+    }
+  };
+
+  const initialTheme = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  applyTheme(initialTheme);
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const nextTheme = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme, true);
+    });
+  }
 
   const closeMenu = () => {
     if (!toggle || !nav) return;

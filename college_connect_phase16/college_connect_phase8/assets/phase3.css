@@ -164,6 +164,29 @@
     align-items: flex-start;
 }
 
+.report-detail-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.report-action-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.report-action-group form:not(.account-form) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.report-action-group .account-form {
+    flex: 1 1 100%;
+}
+
 .moderation-content {
     flex: 1;
     min-width: 0;
@@ -605,7 +628,7 @@ p {
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg,#0F2854 0%,#1C4D8D 55%,#4988C4 100%);
+    background: linear-gradient(135deg,#1B365D 0%,#005A9C 55%,#60C1E5 100%);
     color: #fff;
     box-shadow: var(--shadow-hover);
 }
@@ -647,6 +670,10 @@ p {
 
 .hero h1 span {
     color: var(--color-primary);
+}
+
+:root[data-theme="dark"] .hero h1 {
+    color: #fff;
 }
 
 .hero-copy>p,.page-hero p {
@@ -717,7 +744,7 @@ p {
 }
 
 .text-link,.category-card:hover .category-arrow {
-    color: var(--color-primary);
+    color: var(--link-color);
 }
 
 .category-grid {
@@ -858,6 +885,12 @@ p {
     border-color: var(--border-color);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-card);
+    background: var(--input-background);
+}
+
+.search-form input,
+.search-form select {
+    background: transparent;
 }
 
 .search-symbol {
@@ -882,9 +915,9 @@ p {
 }
 
 .filter-chip:hover,.filter-chip.active {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: var(--surface);
+    background: var(--badge-background);
+    border-color: var(--interactive-accent);
+    color: var(--interactive-accent);
     transform: translateY(-1px);
 }
 
@@ -1384,10 +1417,11 @@ input:disabled {
 }
 
 .admin-table a {
-    color: var(--color-primary);
+    color: var(--link-color);
 }
 
 .admin-table a:hover {
+    color: var(--link-hover);
     text-decoration: underline;
 }
 
@@ -2108,3 +2142,1108 @@ details>summary:focus-visible {
     }
 
 }
+
+/* Central theme surfaces and interaction states */
+html,
+body {
+    background: var(--background);
+    color: var(--body-text);
+}
+
+html {
+    transition: background-color .18s ease;
+}
+
+body,
+.site-header,
+.main-nav,
+main,
+.section,
+.content-columns,
+.page-hero,
+.profile-hero,
+.site-footer,
+.card,
+.account-card,
+.stat-card,
+.profile-summary,
+.profile-form-card,
+.category-card,
+.question-card,
+.answer-card,
+.question-list,
+.question-row,
+.question-votes,
+.notification-item,
+.table-card,
+.account-dropdown,
+.dropdown-menu,
+.ach-member-card,
+.ach-stat,
+.ach-badge,
+.activity-stat-card,
+.activity-item,
+input,
+select,
+textarea,
+button {
+    transition-property: background-color, border-color, color, box-shadow;
+    transition-duration: .18s;
+    transition-timing-function: ease;
+}
+
+body {
+    color: var(--body-text);
+}
+
+h1,
+h2,
+h3,
+h4,
+.section-heading h2,
+.category-title,
+.question-title,
+.announcement h3,
+.profile-summary h2,
+.auth-card-heading h2,
+.profile-form-heading h2 {
+    color: var(--heading-text);
+}
+
+p,
+.muted,
+.text-muted,
+.question-main p,
+.category-description,
+.page-hero p,
+.section-heading p {
+    color: var(--muted-text);
+}
+
+a {
+    color: var(--link-color);
+}
+
+a:hover {
+    color: var(--link-hover);
+}
+
+:focus-visible {
+    outline-color: var(--focus-ring);
+}
+
+.site-header {
+    background: var(--navbar-background);
+    box-shadow: var(--shadow-card);
+}
+
+.cta-banner {
+    background: var(--deep-ocean);
+    box-shadow: var(--shadow-card);
+}
+
+.cta-banner .btn-light {
+    border-color: var(--on-ocean-border);
+    background: var(--on-ocean-surface);
+    color: var(--on-ocean-text);
+}
+
+.cta-banner .btn-light:hover {
+    background: var(--on-ocean-surface);
+    color: var(--primary-hover);
+}
+
+.main-nav {
+    background: var(--sidebar-background);
+}
+
+.brand,
+.main-nav > a,
+.nav-login,
+.nav-account > summary {
+    color: var(--heading-text);
+}
+
+.main-nav > a:hover,
+.main-nav > a.nav-active,
+.nav-login:hover {
+    color: var(--interactive-accent);
+}
+
+.main-nav > a:after {
+    background: var(--interactive-accent);
+}
+
+.theme-toggle {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--background-secondary);
+    color: var(--heading-text);
+}
+
+.filter-chip {
+    border-radius: var(--radius-sm);
+    background: var(--card-background);
+    color: var(--body-text);
+}
+
+.theme-toggle:hover {
+    border-color: var(--interactive-accent);
+    background: var(--hover-background);
+}
+
+.theme-toggle-icon {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.theme-toggle-icon[hidden] {
+    display: none;
+}
+
+.btn {
+    border-radius: var(--radius-sm);
+}
+
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus-visible {
+    border: 1px solid var(--primary-button);
+    background: var(--primary-button);
+    color: var(--primary-button-text);
+}
+
+.btn-primary:hover {
+    border-color: var(--primary-hover);
+    background: var(--primary-hover);
+    box-shadow: var(--shadow-hover);
+}
+
+a.btn-primary,
+a.btn-primary:hover,
+a.btn-primary:focus-visible,
+.main-nav a.btn-primary,
+.main-nav a.btn-primary:hover,
+.main-nav a.btn-primary:focus-visible {
+    color: var(--primary-button-text);
+}
+
+.btn-secondary,
+.btn-ghost {
+    border: 1px solid var(--border);
+    background: var(--surface-elevated);
+    color: var(--interactive-accent);
+}
+
+.btn-secondary:hover,
+.btn-ghost:hover {
+    border-color: var(--secondary-accent);
+    background: var(--hover-background);
+    color: var(--interactive-accent-hover);
+}
+
+.btn-light {
+    border: 1px solid var(--border);
+    background: var(--surface-elevated);
+    color: var(--primary-button);
+}
+
+.btn-light:hover {
+    background: var(--hover-background);
+    color: var(--primary-hover);
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: .58;
+}
+
+button[aria-busy="true"],
+[data-loading="true"] {
+    cursor: progress;
+}
+
+input,
+select,
+textarea,
+.form-field input,
+.form-field select,
+.account-form input,
+.account-form select,
+.account-form textarea,
+.admin-search input,
+.user-status-form select,
+.report-status-form select,
+.report-status-form textarea {
+    border-color: var(--border);
+    background-color: var(--input-background);
+    color: var(--body-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--muted-text);
+    opacity: 1;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--focus-ring);
+    box-shadow: 0 0 0 3px var(--focus-shadow);
+}
+
+select option {
+    background: var(--input-background);
+    color: var(--body-text);
+}
+
+.card,
+.account-card,
+.stat-card,
+.profile-summary,
+.profile-form-card,
+.account-dropdown,
+.dropdown-menu,
+.admin-stat,
+.moderation-card,
+.report-card,
+.table-card,
+.question-card,
+.answer-card,
+.question-detail,
+.notification-item {
+    border-color: var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card-background);
+    color: var(--body-text);
+    box-shadow: var(--shadow-card);
+}
+
+.account-dropdown,
+.dropdown-menu {
+    background: var(--dropdown-background);
+    border-color: var(--border);
+    box-shadow: var(--shadow-overlay);
+    color: var(--body-text);
+}
+
+dialog,
+[role="dialog"],
+.modal {
+    background: var(--modal-background);
+    border-color: var(--border);
+    box-shadow: var(--shadow-overlay);
+    color: var(--body-text);
+}
+
+.account-dropdown a,
+.account-dropdown button,
+.dropdown-menu a {
+    color: var(--body-text);
+}
+
+.account-dropdown a:hover,
+.account-dropdown button:hover,
+.dropdown-menu a:hover {
+    background: var(--hover-background);
+    color: var(--interactive-accent);
+}
+
+.category-card,
+.float-card,
+.question-list,
+.question-row,
+.question-detail,
+.answer-card,
+.empty-state,
+.notice-box,
+.form-note,
+.ai-risk,
+.ai-insight-grid > div,
+.ach-count,
+.ach-stat,
+.ach-badge,
+.activity-stat-card,
+.activity-item,
+.activity-empty {
+    border-color: var(--border);
+    background-color: var(--card-background);
+    color: var(--body-text);
+}
+
+.category-card:hover,
+.question-row:hover {
+    border-color: var(--secondary-accent);
+    background: var(--table-row-hover);
+}
+
+.float-card {
+    border-color: var(--border);
+    background: var(--card-background);
+}
+
+.question-row {
+    border-bottom-color: var(--border);
+}
+
+.question-votes,
+.topic-pill,
+.badge,
+.status-chip,
+.role-badge,
+.ach-count,
+.ach-member-role,
+.ach-stat,
+.ach-badge,
+.activity-status,
+.notification-unread,
+.form-note,
+.notice-box,
+.ai-risk {
+    background-color: var(--badge-background);
+    color: var(--body-text);
+}
+
+.topic-pill,
+.badge,
+.status-chip,
+.role-badge,
+.ach-count,
+.ach-member-role,
+.activity-status {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.notification-item,
+.notification-unread {
+    border-color: var(--border);
+    background: var(--notification-background);
+}
+
+.notification-unread {
+    border-left: 4px solid var(--teal-highlight);
+}
+
+.notification-item h3,
+.admin-table th,
+.admin-table td,
+.moderation-content h3,
+.report-card h3 {
+    color: var(--heading-text);
+}
+
+.admin-table {
+    background: var(--card-background);
+}
+
+.admin-table th {
+    border-color: var(--border);
+    background: var(--table-header-background);
+    color: var(--muted-text);
+}
+
+.admin-table td {
+    border-color: var(--border);
+}
+
+.admin-table tbody tr:hover {
+    background: var(--table-row-hover);
+}
+
+.flash-success,
+.status-chip.status-published,
+.status-chip.status-allowed,
+.status-chip.status-approved,
+.status-chip.status-active,
+.status-chip.status-accepted,
+.status-chip.status-resolved,
+.accepted-pill {
+    border-color: var(--success);
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+.flash-info,
+.status-chip.status-pending,
+.status-chip.status-pending_review,
+.status-chip.status-review,
+.status-chip.status-reviewing,
+.status-chip.status-open,
+.status-chip.status-appealed {
+    border-color: var(--warning);
+    background: var(--warning-soft);
+    color: var(--warning);
+}
+
+.flash-error,
+.form-errors,
+.status-chip.status-rejected,
+.status-chip.status-blocked,
+.status-chip.status-dismissed,
+.status-chip.status-suspended {
+    border-color: var(--error);
+    background: var(--error-soft);
+    color: var(--error);
+}
+
+.flash-success,
+.flash-error,
+.flash-info,
+.form-errors {
+    border-radius: var(--radius-sm);
+}
+
+.auth-aside,
+.profile-hero,
+.page-hero {
+    border-color: var(--border);
+    border-radius: var(--radius-md);
+    background: var(--background-secondary);
+}
+
+.auth-aside h1,
+.profile-hero h1 {
+    color: var(--heading-text);
+}
+
+.auth-aside > p,
+.auth-benefits,
+.auth-card-heading p,
+.profile-form-heading p,
+.profile-hero p,
+.profile-summary > p,
+.profile-status,
+.moderation-content p,
+.report-card p {
+    color: var(--body-text);
+}
+
+.auth-benefits span,
+.category-icon,
+.mini-icon,
+.profile-avatar {
+    border-color: var(--border);
+    background: var(--surface-elevated);
+}
+
+.form-field label,
+.account-form label,
+.report-status-form label {
+    color: var(--body-text);
+}
+
+.form-field input:disabled,
+.account-form input:disabled,
+.account-form select:disabled,
+.account-form textarea:disabled {
+    background: var(--background-secondary);
+    color: var(--muted-text);
+}
+
+.site-footer {
+    background: var(--footer-background);
+    color: var(--footer-text);
+}
+
+.site-footer .brand,
+.site-footer .footer-links a {
+    color: var(--footer-text);
+}
+
+.site-footer .dropdown-menu a {
+    color: var(--body-text);
+}
+
+.site-footer .brand-light,
+.site-footer .footer-inner > p,
+.site-footer .footer-bottom,
+.site-footer .developed-label,
+.site-footer .dropdown-title {
+    color: var(--footer-text);
+}
+
+.site-footer .footer-links a:hover,
+.site-footer .dropdown-title:hover {
+    color: var(--footer-link-hover);
+}
+
+.site-footer .dropdown-menu {
+    border-color: var(--border);
+    background: var(--dropdown-background);
+    box-shadow: var(--shadow-overlay);
+}
+
+.site-footer .dropdown-menu a:hover {
+    background: var(--hover-background);
+    color: var(--interactive-accent);
+}
+
+.footer-bottom {
+    border-color: var(--border);
+}
+
+html[data-theme] .achievements-page {
+    --ach-navy: var(--heading-text);
+    --ach-blue: var(--interactive-accent);
+    --ach-accent: var(--teal-highlight);
+    --ach-light: var(--background-secondary);
+    --ach-text: var(--body-text);
+    --ach-muted: var(--muted-text);
+    --ach-border: var(--border);
+    --ach-surface: var(--card-background);
+    color: var(--body-text);
+}
+
+html[data-theme] .achievements-page .ach-hero,
+html[data-theme] .achievements-page .ach-member-card {
+    border-color: var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card-background);
+    box-shadow: var(--shadow-card);
+}
+
+html[data-theme] .achievements-page .ach-count,
+html[data-theme] .achievements-page .ach-member-role,
+html[data-theme] .achievements-page .ach-stat,
+html[data-theme] .achievements-page .ach-badge,
+html[data-theme] .achievements-page .ach-empty,
+html[data-theme] .achievements-page .ach-note {
+    border-color: var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--background-secondary);
+    color: var(--body-text);
+}
+
+html[data-theme] .achievements-page .ach-badge-icon,
+html[data-theme] .achievements-page .ach-empty-icon {
+    background: var(--surface-elevated);
+    color: var(--secondary-accent);
+}
+
+html[data-theme] .achievements-page .ach-badge:hover,
+html[data-theme] .achievements-page .ach-member-card:hover {
+    border-color: var(--teal-highlight);
+    background: var(--table-row-hover);
+}
+
+html[data-theme] .achievements-page .ach-member-role {
+    color: var(--muted-text);
+}
+
+html[data-theme] .my-activity-page {
+    --activity-navy: var(--heading-text);
+    --activity-blue: var(--interactive-accent);
+    --activity-accent: var(--teal-highlight);
+    --activity-light: var(--background-secondary);
+    --activity-text: var(--body-text);
+    --activity-muted: var(--muted-text);
+    --activity-border: var(--border);
+    color: var(--body-text);
+}
+
+html[data-theme] .my-activity-page .activity-hero,
+html[data-theme] .my-activity-page .activity-stat-card,
+html[data-theme] .my-activity-page .activity-item,
+html[data-theme] .my-activity-page .activity-empty {
+    border-color: var(--border);
+    border-radius: var(--radius-md);
+    background: var(--card-background);
+    box-shadow: var(--shadow-card);
+}
+
+html[data-theme] .my-activity-page .activity-stat-icon,
+html[data-theme] .my-activity-page .activity-item-icon,
+html[data-theme] .my-activity-page .activity-empty-icon,
+html[data-theme] .my-activity-page .activity-status {
+    border-color: var(--border);
+    background: var(--background-secondary);
+    color: var(--body-text);
+}
+
+html[data-theme] .my-activity-page .activity-item-description {
+    color: var(--body-text);
+}
+
+html[data-theme] .my-activity-page .activity-status.published,
+html[data-theme] .my-activity-page .activity-status.accepted,
+html[data-theme] .my-activity-page .activity-accepted {
+    border-color: var(--success);
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+html[data-theme] .my-activity-page .activity-status.pending {
+    border-color: var(--warning);
+    background: var(--warning-soft);
+    color: var(--warning);
+}
+
+html[data-theme] .my-activity-page .activity-status.rejected {
+    border-color: var(--error);
+    background: var(--error-soft);
+    color: var(--error);
+}
+
+html[data-theme] .my-activity-page .activity-stat-card:hover,
+html[data-theme] .my-activity-page .activity-item:hover {
+    border-color: var(--teal-highlight);
+    box-shadow: var(--shadow-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body,
+    .site-header,
+    .main-nav,
+    main,
+    .section,
+    .content-columns,
+    .page-hero,
+    .profile-hero,
+    .site-footer,
+    .card,
+    .account-card,
+    .stat-card,
+    .profile-summary,
+    .profile-form-card,
+    .question-list,
+    .question-row,
+    .notification-item,
+    .table-card,
+    input,
+    select,
+    textarea,
+    button {
+        transition-duration: 0s;
+    }
+}
+
+:root[data-theme="dark"] .brand,
+:root[data-theme="dark"] .nav-avatar,
+:root[data-theme="dark"] .btn-secondary:hover,
+:root[data-theme="dark"] .btn-ghost:hover,
+:root[data-theme="dark"] .section-heading h2,
+:root[data-theme="dark"] .cta-banner h2,
+:root[data-theme="dark"] .auth-aside h1,
+:root[data-theme="dark"] .auth-card-heading h2,
+:root[data-theme="dark"] .profile-form-heading h2,
+:root[data-theme="dark"] .profile-hero h1 {
+    color: var(--heading-text);
+}
+
+:root[data-theme="dark"] .hero-proof {
+    color: var(--body-text);
+}
+
+:root[data-theme="dark"] .achievements-page .ach-avatar {
+    border-color: var(--border);
+    background: var(--surface-elevated);
+    color: var(--teal-highlight);
+}
+
+:root[data-theme="dark"] .achievements-page .ach-member-info h3,
+:root[data-theme="dark"] .achievements-page .ach-stat strong,
+:root[data-theme="dark"] .achievements-page .ach-badge-heading h4 {
+    color: var(--heading-text);
+}
+
+:root[data-theme="dark"] .achievements-page .ach-member-role,
+:root[data-theme="dark"] .achievements-page .ach-count,
+:root[data-theme="dark"] .achievements-page .ach-stat,
+:root[data-theme="dark"] .achievements-page .ach-badge,
+:root[data-theme="dark"] .achievements-page .ach-empty,
+:root[data-theme="dark"] .achievements-page .ach-note {
+    border-color: var(--border);
+    background: var(--surface-elevated);
+    color: var(--body-text);
+}
+
+/* =========================================
+   COLLEGE CONNECT - PROFILE PILL FIX
+========================================= */
+
+.site-header .nav-account.cc-profile-menu {
+    position: relative !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+    width: auto !important;
+}
+
+/* Main pill */
+
+.site-header .nav-account.cc-profile-menu > summary.cc-profile-trigger {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+
+    gap: 11px !important;
+
+    width: auto !important;
+    min-width: 215px !important;
+    min-height: 58px !important;
+
+    padding: 6px 13px 6px 7px !important;
+
+    background: #EAF2F9 !important;
+
+    border: 1px solid #D9E5F0 !important;
+    border-radius: 50px !important;
+
+    list-style: none !important;
+    cursor: pointer !important;
+
+    box-sizing: border-box !important;
+}
+
+/* Remove default marker */
+
+.site-header .cc-profile-trigger::-webkit-details-marker {
+    display: none !important;
+}
+
+/* Circular avatar */
+
+.site-header .cc-profile-trigger .cc-profile-avatar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    flex: 0 0 44px !important;
+
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    border-radius: 50% !important;
+
+    background: linear-gradient(
+        135deg,
+        #173F70,
+        #397DBB
+    ) !important;
+
+    color: #FFFFFF !important;
+
+    font-size: 15px !important;
+    font-weight: 800 !important;
+
+    line-height: 1 !important;
+}
+
+/* User details */
+
+.site-header .cc-profile-trigger .cc-profile-info {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+
+    flex: 1 1 auto !important;
+
+    min-width: 0 !important;
+    gap: 2px !important;
+
+    background: transparent !important;
+}
+
+/* Username */
+
+.site-header .cc-profile-trigger .cc-profile-name {
+    display: block !important;
+
+    color: #26394F !important;
+
+    font-size: 14px !important;
+    font-weight: 800 !important;
+
+    line-height: 1.3 !important;
+
+    text-transform: none !important;
+    white-space: nowrap !important;
+}
+
+/* Role */
+
+.site-header .cc-profile-trigger .cc-profile-role {
+    display: block !important;
+
+    color: #687B90 !important;
+
+    font-size: 12px !important;
+    font-weight: 500 !important;
+
+    line-height: 1.3 !important;
+
+    text-transform: capitalize !important;
+}
+
+/* Dropdown arrow */
+
+.site-header .cc-profile-trigger .cc-profile-arrow {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    flex: 0 0 16px !important;
+
+    width: 16px !important;
+    height: 16px !important;
+
+    color: #718196 !important;
+}
+
+.site-header .cc-profile-arrow svg {
+    display: block !important;
+
+    width: 15px !important;
+    height: 15px !important;
+
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-width: 2 !important;
+}
+
+/* Hover */
+
+.site-header .cc-profile-menu > summary:hover {
+    background: #DFEBF6 !important;
+}
+
+/* Dropdown */
+
+.site-header .cc-profile-menu[open] .account-dropdown {
+    position: absolute !important;
+    top: calc(100% + 10px) !important;
+    right: 0 !important;
+
+    z-index: 9999 !important;
+
+    min-width: 210px !important;
+
+    background: #FFFFFF !important;
+
+    border: 1px solid #E1E8F0 !important;
+    border-radius: 12px !important;
+
+    padding: 8px !important;
+
+    box-shadow: 0 12px 30px rgba(0,0,0,0.14) !important;
+}
+
+/* Mobile */
+
+@media(max-width: 650px) {
+    .site-header .nav-account.cc-profile-menu > summary {
+        min-width: 0 !important;
+    }
+
+    .site-header .cc-profile-trigger .cc-profile-avatar {
+        flex-basis: 38px !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+    }
+}
+
+/* ==========================================
+   COLLEGE CONNECT - PROFILE NAVBAR PILL
+   ========================================== */
+
+.site-header .nav-account.cc-profile-menu {
+    position: relative !important;
+    display: inline-block !important;
+    flex-shrink: 0;
+    margin: 0 !important;
+}
+
+/* Profile pill */
+
+.site-header .cc-profile-menu > .cc-profile-trigger {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+
+    width: auto !important;
+    min-width: 215px;
+    min-height: 58px;
+
+    padding: 6px 13px 6px 7px !important;
+
+    background: #eaf2f9 !important;
+    border: 1px solid #d9e5ef !important;
+    border-radius: 50px !important;
+
+    cursor: pointer;
+    list-style: none !important;
+    box-sizing: border-box;
+
+    transition: background .2s ease, box-shadow .2s ease;
+}
+
+/* Remove browser default arrow */
+
+.site-header .cc-profile-trigger::-webkit-details-marker {
+    display: none !important;
+}
+
+.site-header .cc-profile-trigger::marker {
+    content: "" !important;
+}
+
+/* Avatar */
+
+.site-header .cc-profile-avatar {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border-radius: 50% !important;
+
+    background: linear-gradient(
+        135deg,
+        #183b68,
+        #3479bb
+    ) !important;
+
+    color: #ffffff !important;
+
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    font-family: 'Manrope', sans-serif;
+
+    line-height: 1 !important;
+}
+
+/* Name and role wrapper */
+
+.site-header .cc-profile-info {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+
+    gap: 2px !important;
+
+    min-width: 0;
+    flex: 1;
+}
+
+/* Username */
+
+.site-header .cc-profile-name {
+    display: block !important;
+
+    color: #24364b !important;
+
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    line-height: 18px !important;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    max-width: 145px;
+}
+
+/* User role */
+
+.site-header .cc-profile-role {
+    display: block !important;
+
+    color: #64758a !important;
+
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 16px !important;
+}
+
+/* Dropdown arrow */
+
+.site-header .cc-profile-arrow {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 16px !important;
+    height: 16px !important;
+
+    flex-shrink: 0;
+    color: #64758a !important;
+}
+
+.site-header .cc-profile-arrow svg {
+    display: block !important;
+
+    width: 16px !important;
+    height: 16px !important;
+
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-width: 2 !important;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Hover */
+
+.site-header .cc-profile-menu > .cc-profile-trigger:hover {
+    background: #e1edf8 !important;
+    box-shadow: 0 2px 8px rgba(31, 75, 120, .08);
+}
+
+/* Keyboard focus */
+
+.site-header .cc-profile-trigger:focus-visible {
+    outline: 3px solid rgba(37, 99, 170, .3);
+    outline-offset: 3px;
+}
+
+/* Open dropdown arrow */
+
+.site-header .cc-profile-menu[open] .cc-profile-arrow svg {
+    transform: rotate(180deg);
+}
+
+/* Mobile responsive */
+
+@media (max-width: 768px) {
+
+    .site-header .cc-profile-menu > .cc-profile-trigger {
+        min-width: 195px !important;
+        min-height: 54px !important;
+    }
+
+    .site-header .cc-profile-avatar {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+    }
+
+    .site-header .cc-profile-name {
+        max-width: 120px;
+    }
+
+}
+

@@ -14,6 +14,26 @@ $dateFilter = $period === 'month'
     ? ' AND a.created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)'
     : '';
 
+$countSql = "
+    SELECT COUNT(*)
+    FROM (
+        SELECT u.id,
+            COUNT(DISTINCT a.id) AS answer_count,
+            COALESCE(SUM(CASE WHEN v.vote = 1 THEN 1 ELSE 0 END), 0) AS helpful_votes
+        FROM users u
+        LEFT JOIN answers a
+            ON a.user_id = u.id
+            AND a.status = 'published'
+            $dateFilter
+        LEFT JOIN answer_votes v
+            ON v.answer_id = a.id
+        WHERE u.status = 'active'
+          AND u.role <> 'admin'
+        GROUP BY u.id
+        HAVING answer_count > 0 OR helpful_votes > 0
+    ) AS ranked_members
+";
+
 $sql = "
     SELECT
         u.id,
@@ -21,7 +41,7 @@ $sql = "
         u.role,
         COUNT(DISTINCT a.id) AS answer_count,
         COALESCE(SUM(CASE WHEN v.vote = 1 THEN 1 ELSE 0 END), 0) AS helpful_votes,
-        COALESCE(SUM(CASE WHEN a.is_accepted = 1 THEN 1 ELSE 0 END), 0) AS accepted_answers
+        COUNT(DISTINCT CASE WHEN a.is_accepted = 1 THEN a.id END) AS accepted_answers
     FROM users u
     LEFT JOIN answers a
         ON a.user_id = u.id
@@ -37,15 +57,24 @@ $sql = "
         helpful_votes DESC,
         accepted_answers DESC,
         answer_count DESC,
-        u.full_name ASC
-    LIMIT 50
+        u.full_name ASC,
+        u.id ASC
+    LIMIT :pagination_limit OFFSET :pagination_offset
 ";
 
 try {
-    $members = db()->query($sql)->fetchAll();
+    $memberResult = getPaginatedRecords(
+        $countSql,
+        $sql,
+        [],
+        20
+    );
+    $members = $memberResult['records'];
+    $pagination = $memberResult['pagination'];
 } catch (Throwable $ex) {
     $members = [];
     $loadError = true;
+    $pagination = getPaginationData(0, 20);
 
     error_log('Leaderboard query failed: ' . $ex->getMessage());
 }
@@ -68,6 +97,11 @@ require __DIR__ . '/includes/header.php';
 
         <form method="get" class="search-form" style="max-width: 240px">
             <label for="period" class="sr-only">Time period</label>
+            <input
+                type="hidden"
+                name="per_page"
+                value="<?= (int) $pagination['per_page'] ?>"
+            >
             <select id="period" name="period" onchange="this.form.submit()">
                 <option value="all" <?= $period === 'all' ? 'selected' : '' ?>>All time</option>
                 <option value="month" <?= $period === 'month' ? 'selected' : '' ?>>Last 30 days</option>
@@ -92,7 +126,7 @@ require __DIR__ . '/includes/header.php';
             <?php foreach ($members as $i => $m): ?>
                 <article class="question-row">
                     <div class="question-votes">
-                        <strong>#<?= $i + 1 ?></strong>
+                        <strong>#<?= (int) $pagination['offset'] + $i + 1 ?></strong>
                         <span>rank</span>
                     </div>
 
@@ -113,6 +147,8 @@ require __DIR__ . '/includes/header.php';
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
+
+    <?= renderPagination($pagination, 'page', 'per_page', 'Contributors') ?>
 
     <p class="muted" style="margin-top: 1rem">
         This is a lightweight community score, not a measure of a member's overall ability.

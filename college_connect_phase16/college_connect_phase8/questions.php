@@ -137,7 +137,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $categories = get_categories();
-$questions = search_questions($search, $selectedCategory);
+$questionPagination = [];
+$questions = search_questions(
+    $search,
+    $selectedCategory,
+    $questionPagination
+);
 
 require __DIR__ . '/includes/header.php';
 
@@ -183,6 +188,16 @@ require __DIR__ . '/includes/header.php';
             value="<?= e($search) ?>"
             placeholder="Search questions, topics, or keywords..."
         >
+        <input
+            type="hidden"
+            name="per_page"
+            value="<?= (int) $questionPagination['per_page'] ?>"
+        >
+        <input
+            type="hidden"
+            name="category"
+            value="<?= $selectedCategory ?>"
+        >
 
         <button class="btn btn-primary" type="submit">
             Search
@@ -193,7 +208,7 @@ require __DIR__ . '/includes/header.php';
 
         <a
             class="filter-chip <?= $selectedCategory === 0 ? 'active' : '' ?>"
-            href="questions.php"
+            href="<?= e(buildPaginationUrl(1, ['category' => 0])) ?>"
         >
             All topics
         </a>
@@ -202,7 +217,7 @@ require __DIR__ . '/includes/header.php';
 
             <a
                 class="filter-chip <?= $selectedCategory === (int) $c['id'] ? 'active' : '' ?>"
-                href="questions.php?category=<?= (int) $c['id'] ?>"
+                href="<?= e(buildPaginationUrl(1, ['category' => (int) $c['id']])) ?>"
             >
                 <?= e($c['name']) ?>
             </a>
@@ -214,8 +229,8 @@ require __DIR__ . '/includes/header.php';
     <div class="section-heading compact result-heading">
         <div>
             <h2>
-                <?= count($questions) ?>
-                <?= count($questions) === 1 ? 'question' : 'questions' ?>
+                <?= (int) $questionPagination['total'] ?>
+                <?= (int) $questionPagination['total'] === 1 ? 'question' : 'questions' ?>
                 found
             </h2>
 
@@ -351,6 +366,8 @@ require __DIR__ . '/includes/header.php';
         </div>
 
     <?php endif; ?>
+
+    <?= renderPagination($questionPagination, 'page', 'per_page', 'Questions') ?>
 
 </section>
 

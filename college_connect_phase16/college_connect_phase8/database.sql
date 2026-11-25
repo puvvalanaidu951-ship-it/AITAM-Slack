@@ -81,16 +81,20 @@ CREATE TABLE IF NOT EXISTS moderation_logs (
 
 CREATE TABLE IF NOT EXISTS reports (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  reporter_id BIGINT UNSIGNED NULL,
-  content_type ENUM('question','answer','user') NOT NULL,
-  content_id BIGINT UNSIGNED NOT NULL,
-  reason VARCHAR(100) NOT NULL,
-  details TEXT NULL,
-  status ENUM('open','reviewing','resolved','dismissed') NOT NULL DEFAULT 'open',
+  user_id BIGINT UNSIGNED NOT NULL,
+  report_type ENUM('question','answer','user','spam','harassment','technical','other') NOT NULL,
+  reported_item_id BIGINT UNSIGNED NULL,
+  subject VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL,
+  admin_notes TEXT NULL,
+  rejection_reason TEXT NULL,
+  status ENUM('pending','reviewing','resolved','rejected') NOT NULL DEFAULT 'pending',
   reviewed_by BIGINT UNSIGNED NULL,
+  reviewed_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_reports_reporter FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE SET NULL,
-  INDEX idx_reports_status (status, created_at)
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_reports_status (status, created_at),
+  INDEX idx_reports_category (report_type, created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS notifications (
