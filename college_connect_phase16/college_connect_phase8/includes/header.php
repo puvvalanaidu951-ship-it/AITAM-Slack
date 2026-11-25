@@ -1,15 +1,9 @@
-
+﻿
 <?php
 
 $pageTitle = $pageTitle ?? 'Home';
 $navUser = current_user();
 $flash = get_flash();
-
-/*
-|--------------------------------------------------------------------------
-| Detect Admin Pages
-|--------------------------------------------------------------------------
-*/
 
 $inAdmin = (
     basename(dirname($_SERVER['SCRIPT_NAME'] ?? '')) === 'admin'
@@ -58,10 +52,8 @@ if ($navUser) {
 <html lang="en" data-theme="light">
 
 <head>
-
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <meta name="description" content="AITAM SLACK college community">
 
     <title><?= e($pageTitle) ?> | AITAM SLACK</title>
@@ -93,26 +85,16 @@ if ($navUser) {
         rel="stylesheet"
     >
 
-    <!-- Main Stylesheet -->
     <link
         rel="stylesheet"
         href="<?= e($rootPrefix) ?>assets/style.css"
     >
 
-    <!-- Existing Website Stylesheet -->
     <link
         rel="stylesheet"
         href="<?= e($rootPrefix) ?>assets/phase3.css"
     >
 
-<<<<<<< HEAD
-    <!-- Admin Sidebar Stylesheet: Admin Pages Only -->
-    <?php if ($inAdmin): ?>
-
-        <link
-            rel="stylesheet"
-            href="<?= e($rootPrefix) ?>assets/admin-sidebar.css"
-=======
     <link
         rel="stylesheet"
         href="<?= e($rootPrefix) ?>assets/pagination.css"
@@ -127,7 +109,6 @@ if ($navUser) {
         <link
             rel="stylesheet"
             href="<?= e($rootPrefix) ?>assets/college-updates.css"
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
         >
 
     <?php endif; ?>
@@ -136,24 +117,11 @@ if ($navUser) {
 
 <body>
 
-<<<<<<< HEAD
-    <!-- ================= SITE HEADER ================= -->
-
-    <header
-        class="site-header"
-        style="width: 100%; position: sticky; top: 0; z-index: 1000; background-color: #fff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);"
-    >
-
-        <div class="nav-wrap">
-
-            <!-- LOGO -->
-=======
     <header class="site-header">
 
         <div class="nav-wrap">
 
             <!-- Brand -->
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
 
             <a
                 class="brand"
@@ -162,14 +130,12 @@ if ($navUser) {
             >
 
                 <span aria-hidden="true">
-
                     <img
                         src="<?= $rootPrefix ?>assets/aitam.png"
                         alt="AITAM SLACK"
                         width="50"
                         height="50"
                     >
-
                 </span>
 
                 <span>
@@ -178,12 +144,7 @@ if ($navUser) {
 
             </a>
 
-<<<<<<< HEAD
-
-            <!-- MOBILE MENU BUTTON -->
-=======
             <!-- Mobile Menu Button -->
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
 
             <button
                 class="menu-toggle"
@@ -193,20 +154,10 @@ if ($navUser) {
                 aria-controls="mainNav"
                 aria-expanded="false"
             >
-
-                <span
-                    class="menu-icon"
-                    aria-hidden="true"
-                ></span>
-
+                <span class="menu-icon" aria-hidden="true"></span>
             </button>
 
-<<<<<<< HEAD
-
-            <!-- MAIN NAVIGATION -->
-=======
             <!-- Main Navigation -->
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
 
             <nav
                 class="main-nav"
@@ -222,7 +173,6 @@ if ($navUser) {
                     Home
                 </a>
 
-
                 <a
                     <?= $isActive(['questions.php', 'question.php']) ?>
                     href="<?= $rootPrefix ?>questions.php"
@@ -230,14 +180,12 @@ if ($navUser) {
                     Questions
                 </a>
 
-
                 <a
                     <?= $isActive(['search_questions.php']) ?>
                     href="<?= $rootPrefix ?>search_questions.php"
                 >
                     Search
                 </a>
-
 
                 <a
                     <?= $isActive(['college_updates.php', 'college_update.php']) ?>
@@ -253,7 +201,6 @@ if ($navUser) {
                     Leaderboard
                 </a>
 
-
                 <a
                     <?= $isActive(['achievements.php']) ?>
                     href="<?= $rootPrefix ?>achievements.php"
@@ -261,35 +208,21 @@ if ($navUser) {
                     Achievements
                 </a>
 
-<<<<<<< HEAD
-
-                <a
-=======
                 <!-- <a
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
                     <?= $isActive(['my_activity.php']) ?>
                     href="<?= $rootPrefix ?>my_activity.php"
                 >
                     My activity
                 </a> -->
 
-<<<<<<< HEAD
-
-                <a href="<?= $rootPrefix ?>index.php#categories">
-                    Topics
-=======
                 <a
                     <?= $isActive(['report.php']) ?>
                     href="<?= e($rootPrefix) ?>report.php"
                 >
                     Report
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
                 </a>
 
-
                 <?php if ($navUser): ?>
-
-                    <!-- NOTIFICATIONS -->
 
                     <a
                         <?= $isActive(['notifications.php']) ?>
@@ -297,9 +230,6 @@ if ($navUser) {
                     >
                         Notifications
                     </a>
-
-
-                    <!-- ADMIN LINK -->
 
                     <?php if ($navUser['role'] === 'admin'): ?>
 
@@ -318,19 +248,7 @@ if ($navUser) {
 
                 <?php endif; ?>
 
-<<<<<<< HEAD
-
-                <!-- CAMPUS UPDATES -->
-
-                <a href="<?= $rootPrefix ?>index.php#campus-updates">
-                    Campus updates
-                </a>
-=======
                 <!-- Account Actions -->
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
-
-
-                <!-- ACCOUNT ACTIONS -->
 
                 <div class="nav-actions">
 
@@ -342,33 +260,10 @@ if ($navUser) {
 
                             <summary class="cc-profile-trigger">
 
-<<<<<<< HEAD
-                            <summary>
-
-=======
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
                                 <span
                                     class="cc-profile-avatar"
                                     aria-hidden="true"
                                 >
-<<<<<<< HEAD
-
-                                    <?= e(
-                                        strtoupper(
-                                            mb_substr(
-                                                $navUser['full_name'],
-                                                0,
-                                                1
-                                            )
-                                        )
-                                    ) ?>
-
-                                </span>
-
-
-                                <span class="nav-account-name">
-                                    <?= e($navUser['full_name']) ?>
-=======
                                     <?= e($navInitials) ?>
                                 </span>
 
@@ -382,9 +277,7 @@ if ($navUser) {
                                         <?= e($navRole) ?>
                                     </span>
 
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
                                 </span>
-
 
                                 <span
                                     class="cc-profile-arrow"
@@ -397,12 +290,7 @@ if ($navUser) {
 
                             </summary>
 
-<<<<<<< HEAD
-
-                            <!-- ACCOUNT DROPDOWN -->
-=======
                             <!-- Existing Dropdown -->
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
 
                             <div class="account-dropdown">
 
@@ -410,18 +298,13 @@ if ($navUser) {
                                     My profile
                                 </a>
 
-
                                 <a href="<?= $rootPrefix ?>bookmarks.php">
                                     Saved questions
                                 </a>
 
-
                                 <a href="<?= $rootPrefix ?>my_activity.php">
                                     My activity
                                 </a>
-
-
-                                <!-- LOGOUT FORM -->
 
                                 <form
                                     method="post"
@@ -443,9 +326,6 @@ if ($navUser) {
 
                     <?php else: ?>
 
-
-                        <!-- LOGIN -->
-
                         <a
                             class="nav-login"
                             href="<?= $rootPrefix ?>login.php"
@@ -453,17 +333,12 @@ if ($navUser) {
                             Log in
                         </a>
 
-
-                        <!-- REGISTER -->
-
                         <a
                             class="btn btn-small btn-primary"
                             href="<?= $rootPrefix ?>register.php"
                         >
                             Join community
-
                             <span aria-hidden="true">↗</span>
-
                         </a>
 
                     <?php endif; ?>
@@ -509,8 +384,6 @@ if ($navUser) {
 
         </div>
 
-<<<<<<< HEAD
-=======
 <style>
 /* College Connect profile navbar - direct styling */
 
@@ -648,34 +521,9 @@ if ($navUser) {
 
 
 
->>>>>>> 56882bb9f493ac3e31ab078983b6cb59019105f4
     </header>
 
-
-    <!-- ================= ADMIN LAYOUT ================= -->
-
-    <?php if ($inAdmin): ?>
-
-        <div class="admin-layout">
-
-            <!-- ADMIN SIDEBAR -->
-
-            <?php require __DIR__ . '/../admin/sidebar.php'; ?>
-
-
-            <!-- ADMIN MAIN CONTENT -->
-
-            <div class="admin-content">
-
-    <?php endif; ?>
-
-
-    <!-- ================= MAIN PAGE CONTENT ================= -->
-
-    <main<?= $inAdmin ? ' class="admin-page-main"' : '' ?>>
-
-
-        <!-- FLASH MESSAGE -->
+    <main>
 
         <!-- Flash Messages -->
 
@@ -687,9 +535,7 @@ if ($navUser) {
                     class="flash flash-<?= e($flash['type']) ?>"
                     role="status"
                 >
-
                     <?= e($flash['message']) ?>
-
                 </div>
 
             </div>
