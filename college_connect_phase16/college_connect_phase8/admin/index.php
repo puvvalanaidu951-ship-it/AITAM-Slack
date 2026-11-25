@@ -84,42 +84,6 @@ require __DIR__ . '/../includes/header.php';
 
     </div>
 
-    <!-- Administrative navigation -->
-    <div class="admin-actions">
-
-        <a class="btn btn-primary" href="moderation.php">
-            Review content
-        </a>
-
-        <a class="btn btn-secondary" href="reports.php">
-            Manage reports
-        </a>
-
-        <a class="btn btn-secondary" href="users.php">
-            Manage members
-        </a>
-
-        <a class="btn btn-secondary" href="announcements.php">
-            Announcements
-        </a>
-
-        <a class="btn btn-secondary" href="appeals.php">
-            Content appeals
-        </a>
-
-        <a class="btn btn-secondary" href="ai_review.php">
-            AI question insights
-        </a>
-
-        <a class="btn btn-secondary" href="answer_review.php">
-            AI answer review
-        </a>
-
-        <a class="btn btn-secondary" href="audit_logs.php">
-            Admin audit log
-        </a>
-
-    </div>
 
     <!-- Recent questions section -->
     <div class="section-heading compact">
